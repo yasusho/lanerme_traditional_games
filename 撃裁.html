@@ -3,6 +3,18 @@
     <head>
         <meta charset="UTF-8">
         <title>撃裁</title>
+
+        <style>
+        @font-face {
+        font-family: "linzklar_rounded";
+        src: url("https://yasusho.github.io/linmarn_font_project/fonts/linzklar_rounded.woff") format('woff');
+        }
+
+        body, button {
+        font-family: "linzklar_rounded";
+        }
+        </style>
+
         <script>
         const data = [];
 
@@ -33,10 +45,9 @@
             }
             }
         </script>
-
     </head>
     <body>
-        <h1>裁</h1>
+        <h1 class="linzklar_rounded">裁</h1>
         <button onclick = "Getdice1();">撃裁</button>
         <button onclick = "Reset();">新裁</button>
         <input type = "checkbox" id="checkbox">無二即新
