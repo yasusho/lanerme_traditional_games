@@ -15,6 +15,25 @@
         button {
             font-family: "linzklar_rounded";
         }
+
+        .button {
+            display: inline-block;
+            padding: 0.3em 1em;
+            text-decoration: none;
+            font-weight: bold;
+            color: #005242;
+            border: solid 1px #005242;
+            border-radius: 3px;
+            transition: .4s;
+        }
+
+        .button:hover {
+            background: #005242;
+            color: white;
+        }
+
+
+
     </style>
 
     <script>
@@ -51,15 +70,15 @@
 
 <body>
     <h1 class="linzklar_rounded">裁</h1>
-    <button onclick="getDice();">撃裁</button>
-    <button onclick="reset();">新裁</button>
-    <input type="checkbox" id="checkbox">無二即新
-    <br>
-    <p>
-        <font size="5"><b><span id="result">0</span></b></font>
-    </p>
-    <p>値積 <span id="score"></span></p>
-    <p>上時 <span id="history"></span></p>
+    <a href="#" class="button" onclick="getDice();">撃裁</a>
+    <a href="#" class="button" onclick="reset();">新裁<a>
+            <input type="checkbox" id="checkbox">無二即新
+            <br>
+            <p>
+                <font size="5"><b><span id="result">0</span></b></font>
+            </p>
+            <p><b>値積 </b><span id="score"></span></p>
+            <p><b>上時 </b><span id="history"></span></p>
 </body>
 
 </html>
