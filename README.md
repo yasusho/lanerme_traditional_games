@@ -1,0 +1,2 @@
+# lanerme_traditional_games
+ラネーメの伝統ゲームに関するリポジトリ。余りまとまっていない。
