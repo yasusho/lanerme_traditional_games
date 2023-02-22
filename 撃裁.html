@@ -1,21 +1,23 @@
 <!DOCTYPE html>
 <html lang="ja">
-    <head>
-        <meta charset="UTF-8">
-        <title>撃裁</title>
 
-        <style>
+<head>
+    <meta charset="UTF-8">
+    <title>撃裁</title>
+
+    <style>
         @font-face {
-        font-family: "linzklar_rounded";
-        src: url("https://yasusho.github.io/linmarn_font_project/fonts/linzklar_rounded.woff") format('woff');
+            font-family: "linzklar_rounded";
+            src: url("https://yasusho.github.io/linmarn_font_project/fonts/linzklar_rounded.woff") format('woff');
         }
 
-        body, button {
-        font-family: "linzklar_rounded";
+        body,
+        button {
+            font-family: "linzklar_rounded";
         }
-        </style>
+    </style>
 
-        <script>
+    <script>
         const data = [];
 
         function reset() {
@@ -23,14 +25,14 @@
             document.getElementById("result").innerHTML = '0';
             document.getElementById("history").innerHTML = '';
             document.getElementById("score").innerHTML = '';
-            }
+        }
 
         function getDice() {
-            const dice1 = Math.floor(Math.random()*2);
-            const dice2 = Math.floor(Math.random()*2);
-            const dice3 = Math.floor(Math.random()*2);
-            const dice4 = Math.floor(Math.random()*2);
-            const dice5 = Math.floor(Math.random()*2);
+            const dice1 = Math.floor(Math.random() * 2);
+            const dice2 = Math.floor(Math.random() * 2);
+            const dice3 = Math.floor(Math.random() * 2);
+            const dice4 = Math.floor(Math.random() * 2);
+            const dice5 = Math.floor(Math.random() * 2);
             const result = dice1 + dice2 + dice3 + dice4 + dice5
 
             data.push(result);
@@ -40,20 +42,24 @@
             document.getElementById("history").innerHTML = data;
             document.getElementById("score").innerHTML = score;
 
-            if (result < 2 && document.getElementById("checkbox").checked){
+            if (result < 2 && document.getElementById("checkbox").checked) {
                 reset()
             }
-            }
-        </script>
-    </head>
-    <body>
-        <h1 class="linzklar_rounded">裁</h1>
-        <button onclick = "getDice();">撃裁</button>
-        <button onclick = "reset();">新裁</button>
-        <input type = "checkbox" id="checkbox">無二即新
-        <br>
-        <p><font size = "5"><b><span id="result">0</span></b></font></p>  
-        <p>値積 <span id="score"></span></p>
-        <p>上時 <span id="history"></span></p>  
-    </body>
+        }
+    </script>
+</head>
+
+<body>
+    <h1 class="linzklar_rounded">裁</h1>
+    <button onclick="getDice();">撃裁</button>
+    <button onclick="reset();">新裁</button>
+    <input type="checkbox" id="checkbox">無二即新
+    <br>
+    <p>
+        <font size="5"><b><span id="result">0</span></b></font>
+    </p>
+    <p>値積 <span id="score"></span></p>
+    <p>上時 <span id="history"></span></p>
+</body>
+
 </html>
