@@ -69,6 +69,7 @@
             document.getElementById("result").innerHTML = '0';
             document.getElementById("history").innerHTML = '';
             document.getElementById("score").innerHTML = '';;
+            document.getElementById('cancel').play();
         }
 
         function getDice() {
@@ -115,6 +116,7 @@
             scoreboard.length = 0;
             document.getElementById("lastscore").innerHTML = '';
             document.getElementById("highscore").innerHTML = '';;
+            document.getElementById('cancel').play();
         }
 
     </script>
@@ -124,6 +126,11 @@
     <audio id="xyr" preload="auto">
         <source src="xyr.ogg" type="audio/ogg">
     </audio>
+
+    <audio id="xyr" preload="auto">
+        <source src="cancel.mp3" type="audio/mp3>
+    </audio>
+
 
     <h1 class="linzklar_rounded">裁</h1>
     <div>
