@@ -72,17 +72,16 @@
     </style>
 
     <script>
-        const data = [];
+        const history = [];
         const scoreboard = [];
 
         function reset() {
-            data.length = 0;
+            history.length = 0;
             scoreboard.push(document.getElementById("lastscore").innerHTML)
 
             document.getElementById("result").innerHTML = '0';
-            document.getElementById("history").innerHTML = '';
-            document.getElementById("score").innerHTML = '';;
-            document.getElementById("cancel").play();
+            document.getElementById("history").innerHTML = '0';
+            document.getElementById("times").innerHTML = null;
 
             document.getElementById("lastscore").innerHTML = scoreboard[scoreboard.length - 1];
             document.getElementById("highscore").innerHTML = Math.max(...scoreboard);
@@ -92,6 +91,7 @@
             document.getElementById("image3").src = "xyr_0.png";
             document.getElementById("image4").src = "xyr_0.png";
             document.getElementById("image5").src = "xyr_0.png";
+            document.getElementById("cancel").play();
         }
 
         function getDice() {
@@ -111,13 +111,13 @@
             document.getElementById('xyr').currentTime = 0;
             document.getElementById('xyr').play();
 
-            data.push(result);
-            const score = data.reduce((sum, num) => sum + num, 0);
+            history.push(result);
+            const lastscore = history.reduce((sum, num) => sum + num, 0);
 
             document.getElementById("result").innerHTML = result;
-            document.getElementById("history").innerHTML = data;
-            document.getElementById("score").innerHTML = score;
-            document.getElementById("lastscore").innerHTML = score;
+            document.getElementById("history").innerHTML = history;
+            document.getElementById("times").innerHTML = history.length + "時";
+            document.getElementById("lastscore").innerHTML = lastscore;
 
             if (result < 2 && document.getElementById("checkbox").checked) {
                 reset()
@@ -174,14 +174,13 @@
                 </div>
                 <br>
                 <font size="5">
-                    <div><b>値積　<span id="score"></span></b></div>
                     <font size="3">
-                        <div><b>上時　</b><span id="history"></span></div>
+                        <div><b>上時　</b><span id="history">0</span>　<span id="times"></span></div>
                     </font>
                     <font color="#d43700"><b>
-                            <div class="scoreboard" style="width: 400px;">
-                                <div style="width: 200px;">全新値積　<span id="lastscore">須裁</span></div>
-                                <div style="width: 200px;">全大値積　<span id="highscore">須定</span></div>
+                            <div class="scoreboard" style="width: 320px;">
+                                <div style="width: 160px;">値積　<span id="lastscore">0</span></div>
+                                <div style="width: 160px;">全大値積　<span id="highscore">0</span></div>
                             </div>
                         </b>
                     </font>
