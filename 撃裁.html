@@ -66,9 +66,9 @@
         }
 
         input[type=checkbox] {
-	transform: scale(2);
-	margin: 0 7px 0 10px;
-}
+            transform: scale(2);
+            margin: 0 7px 0 10px;
+        }
     </style>
 
     <script>
@@ -77,10 +77,16 @@
 
         function reset() {
             data.length = 0;
+            scoreboard.push(document.getElementById("lastscore").innerHTML)
+
             document.getElementById("result").innerHTML = '0';
             document.getElementById("history").innerHTML = '';
             document.getElementById("score").innerHTML = '';;
             document.getElementById("cancel").play();
+
+            document.getElementById("lastscore").innerHTML = scoreboard[scoreboard.length - 1];
+            document.getElementById("highscore").innerHTML = Math.max(...scoreboard);
+
             document.getElementById("image1").src = "xyr_0.png";
             document.getElementById("image2").src = "xyr_0.png";
             document.getElementById("image3").src = "xyr_0.png";
@@ -111,15 +117,10 @@
             document.getElementById("result").innerHTML = result;
             document.getElementById("history").innerHTML = data;
             document.getElementById("score").innerHTML = score;
+            document.getElementById("lastscore").innerHTML = score;
 
             if (result < 2 && document.getElementById("checkbox").checked) {
-
-                scoreboard.push(score)
-                document.getElementById("lastscore").innerHTML = scoreboard[scoreboard.length - 1];
-                const highscore = Math.max(...scoreboard)
-                document.getElementById("highscore").innerHTML = highscore;
                 reset()
-
             }
         }
 
@@ -145,7 +146,7 @@
 
     <h1 class="linzklar_rounded">裁</h1>
     <div>
-        撃<b>撃裁</b>即　人力撃裁。撃<b>新裁</b>即　其値入行。<b>二無即新</b>　使此遊銭。軸人撃裁　即手其値。
+        撃<b>撃裁</b>即　人力撃裁。撃<b>定裁</b>即　其値入行。<b>二無失全</b>　使此遊銭。軸人撃裁　即手其値。
         <br>
         別而其値　無亦一即　失其値而　手無之値。別而始時　人力再裁。無失値即　人力連撃。
         <br>
@@ -153,9 +154,10 @@
     </div>
     <br>
     <a href="#" class="button" onclick="getDice();">撃裁</a>
-    <a href="#" class="button" onclick="reset();">新裁<a>
+    <a href="#" class="button" onclick="reset();">定裁<a>
             <a href="#" class="button_red" onclick="resetScoreboard();">新値積付<a></a>
-                <input type="checkbox" id="checkbox" onchange="scoreboard()"><font size="4"><b>二無即新</b></font>
+                <input type="checkbox" id="checkbox">
+                <font size="4"><b>二無即新</b></font>
                 <br>
 
                 <div class="number_and_xyr" style="width: 160px;">
@@ -173,11 +175,13 @@
                 <br>
                 <font size="5">
                     <div><b>値積　<span id="score"></span></b></div>
-                    <font size="3"><div><b>上時　</b><span id="history"></span></div></font>
+                    <font size="3">
+                        <div><b>上時　</b><span id="history"></span></div>
+                    </font>
                     <font color="#d43700"><b>
-                            <div class="scoreboard" style="width: 360px;">
-                                <div style="width: 180px;">全新値積　<span id="lastscore"></span></div>
-                                <div style="width: 180px;">全大値積　<span id="highscore"></span></div>
+                            <div class="scoreboard" style="width: 400px;">
+                                <div style="width: 200px;">全新値積　<span id="lastscore">須裁</span></div>
+                                <div style="width: 200px;">全大値積　<span id="highscore">須定</span></div>
                             </div>
                         </b>
                     </font>
