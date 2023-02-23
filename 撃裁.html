@@ -69,7 +69,7 @@
             document.getElementById("result").innerHTML = '0';
             document.getElementById("history").innerHTML = '';
             document.getElementById("score").innerHTML = '';;
-            document.getElementById('cancel').play();
+            document.getElementById("cancel").play();
         }
 
         function getDice() {
@@ -80,19 +80,13 @@
             const dice5 = Math.floor(Math.random() * 2);
             const result = dice1 + dice2 + dice3 + dice4 + dice5
 
-            const dice_image1 = document.getElementById("image1");
-            dice_image1.src = "xyr_" + dice1 + ".png";
-            const dice_image2 = document.getElementById("image2");
-            dice_image2.src = "xyr_" + dice2 + ".png";
-            const dice_image3 = document.getElementById("image3");
-            dice_image3.src = "xyr_" + dice3 + ".png";
-            const dice_image4 = document.getElementById("image4");
-            dice_image4.src = "xyr_" + dice4 + ".png";
-            const dice_image5 = document.getElementById("image5");
-            dice_image3.src = "xyr_" + dice5 + ".png";
+            document.getElementById("image1").src = "xyr_" + dice1 + ".png";
+            document.getElementById("image2").src = "xyr_" + dice2 + ".png";
+            document.getElementById("image3").src = "xyr_" + dice3 + ".png";
+            document.getElementById("image4").src = "xyr_" + dice4 + ".png";
+            document.getElementById("image5").src = "xyr_" + dice5 + ".png";
 
             document.getElementById('xyr').play();
-
 
             data.push(result);
             const score = data.reduce((sum, num) => sum + num, 0);
@@ -116,7 +110,7 @@
             scoreboard.length = 0;
             document.getElementById("lastscore").innerHTML = '';
             document.getElementById("highscore").innerHTML = '';;
-            document.getElementById('cancel').play();
+            document.getElementById("cancel").play();
         }
 
     </script>
