@@ -20,9 +20,10 @@
             display: inline-block;
             padding: 0.3em 1em;
             text-decoration: none;
+            font-size: large;
             font-weight: bold;
             color: #005242;
-            border: solid 1px #005242;
+            border: solid 2px #005242;
             border-radius: 3px;
             transition: .4s;
         }
@@ -36,9 +37,10 @@
             display: inline-block;
             padding: 0.3em 1em;
             text-decoration: none;
+            font-size: large;
             font-weight: bold;
             color: #d43700;
-            border: solid 1px #d43700;
+            border: solid 2px #d43700;
             border-radius: 3px;
             transition: .4s;
         }
@@ -48,9 +50,13 @@
             color: white;
         }
 
-        .scoreboard {
+        .xyr {
             display: flex;
             justify-content: space-evenly;
+        }
+
+        .scoreboard {
+            display: flex;
         }
 
         .number_and_xyr {
@@ -58,6 +64,11 @@
             justify-content: center;
             flex-direction: column;
         }
+
+        input[type=checkbox] {
+	transform: scale(2);
+	margin: 0 7px 0 10px;
+}
     </style>
 
     <script>
@@ -86,6 +97,7 @@
             document.getElementById("image4").src = "xyr_" + dice4 + ".png";
             document.getElementById("image5").src = "xyr_" + dice5 + ".png";
 
+            document.getElementById('xyr').currentTime = 0;
             document.getElementById('xyr').play();
 
             data.push(result);
@@ -122,7 +134,7 @@
     </audio>
 
     <audio id="cancel" preload="auto">
-        <source src="cancel.mp3" type="audio/mp3">
+        <source src="cancel.ogg" type="audio/ogg">
     </audio>
 
 
@@ -138,14 +150,14 @@
     <a href="#" class="button" onclick="getDice();">撃裁</a>
     <a href="#" class="button" onclick="reset();">新裁<a>
             <a href="#" class="button_red" onclick="resetScoreboard();">新値積付<a></a>
-                <input type="checkbox" id="checkbox" onchange="scoreboard()"><b>二無即新</b>
+                <input type="checkbox" id="checkbox" onchange="scoreboard()"><font size="4"><b>二無即新</b></font>
                 <br>
 
-                <div class="number_and_xyr" style="width: 120pt;">
-                    <p style="width: 120pt; text-align:center;">
+                <div class="number_and_xyr" style="width: 160px;">
+                    <p style="width: 160px; text-align:center;">
                         <font size="15"><b><span id="result">0</span></b></font>
                     </p>
-                    <div class="scoreboard" style="width: 120pt;">
+                    <div class="xyr" style="width: 160px;">
                         <span><img src="xyr_0.png" id="image1"></span>
                         <span><img src="xyr_0.png" id="image2"></span>
                         <span><img src="xyr_0.png" id="image3"></span>
@@ -155,13 +167,12 @@
                 </div>
                 <br>
                 <font size="5">
-                    <div><b>値積　</b><span id="score"></span></div>
-                    <div><b>上時　</b><span id="history"></span></div>
-
+                    <div><b>値積　<span id="score"></span></b></div>
+                    <font size="3"><div><b>上時　</b><span id="history"></span></div></font>
                     <font color="#d43700"><b>
-                            <div class="scoreboard" style="width: 240pt; height: 18pt;">
-                                <div style="width: 120pt;">全新値積　<span id="lastscore"></span></div>
-                                <div style="width: 120pt;">全大値積　<span id="highscore"></span></div>
+                            <div class="scoreboard" style="width: 360px;">
+                                <div style="width: 180px;">全新値積　<span id="lastscore"></span></div>
+                                <div style="width: 180px;">全大値積　<span id="highscore"></span></div>
                             </div>
                         </b>
                     </font>
