@@ -31,6 +31,33 @@
             background: #005242;
             color: white;
         }
+
+        .button_red {
+            display: inline-block;
+            padding: 0.3em 1em;
+            text-decoration: none;
+            font-weight: bold;
+            color: #d43700;
+            border: solid 1px #d43700;
+            border-radius: 3px;
+            transition: .4s;
+        }
+
+        .button_red:hover {
+            background: #d43700;
+            color: white;
+        }
+
+        .scoreboard {
+            display: flex;
+            justify-content: space-evenly;
+        }
+
+        .number_and_xyr {
+            display: flex;
+            justify-content: center;
+            flex-direction: column;
+        }
     </style>
 
     <script>
@@ -41,8 +68,7 @@
             data.length = 0;
             document.getElementById("result").innerHTML = '0';
             document.getElementById("history").innerHTML = '';
-            document.getElementById("score").innerHTML = '';
-            document.getElementById("highscore").innerHTML = '';
+            document.getElementById("score").innerHTML = '';;
         }
 
         function getDice() {
@@ -52,6 +78,20 @@
             const dice4 = Math.floor(Math.random() * 2);
             const dice5 = Math.floor(Math.random() * 2);
             const result = dice1 + dice2 + dice3 + dice4 + dice5
+
+            const dice_image1 = document.getElementById("image1");
+            dice_image1.src = "xyr_" + dice1 + ".png";
+            const dice_image2 = document.getElementById("image2");
+            dice_image2.src = "xyr_" + dice2 + ".png";
+            const dice_image3 = document.getElementById("image3");
+            dice_image3.src = "xyr_" + dice3 + ".png";
+            const dice_image4 = document.getElementById("image4");
+            dice_image4.src = "xyr_" + dice4 + ".png";
+            const dice_image5 = document.getElementById("image5");
+            dice_image3.src = "xyr_" + dice5 + ".png";
+
+            document.getElementById('xyr').play();
+
 
             data.push(result);
             const score = data.reduce((sum, num) => sum + num, 0);
@@ -71,37 +111,61 @@
             }
         }
 
+        function resetScoreboard() {
+            scoreboard.length = 0;
+            document.getElementById("lastscore").innerHTML = '';
+            document.getElementById("highscore").innerHTML = '';;
+        }
+
     </script>
 </head>
 
 <body>
+    <audio id="xyr" preload="auto">
+        <source src="xyr.ogg" type="audio/ogg">
+    </audio>
+
     <h1 class="linzklar_rounded">裁</h1>
+    <div>
+        撃<b>撃裁</b>即　人力撃裁。撃<b>新裁</b>即　其値入行。<b>二無即新</b>　使此遊銭。軸人撃裁　即手其値。
+        <br>
+        別而其値　無亦一即　失其値而　手無之値。別而始時　人力再裁。無失値即　人力連撃。
+        <br>
+        周人同撃　即手其値。其値互戦　大値此善。上行之人　須手銭銭。銭多奮叫　此道無善。
+    </div>
+    <br>
     <a href="#" class="button" onclick="getDice();">撃裁</a>
     <a href="#" class="button" onclick="reset();">新裁<a>
-            <input type="checkbox" id="checkbox" onchange="scoreboard()">二無即新
-            <br>
-            <p>　<font size="13"><b><span id="result">0</span></b></font>
-            </p>
-            <p><b>値積　</b><span id="score"></span></p>
-            <p><b>上時　</b><span id="history"></span></p>
-            <font color="#d43700">
-                <p><b>全新値積　<span id="lastscore"></span></b></p>
-                <p><b>値積全大　<span id="highscore"></span></b></p>
-            </font>
-            <p>
-                撃<b>撃裁</b>即　人力撃裁。撃<b>新裁</b>即　其値入行。
+            <a href="#" class="button_red" onclick="resetScoreboard();">新値積付<a></a>
+                <input type="checkbox" id="checkbox" onchange="scoreboard()"><b>二無即新</b>
                 <br>
-                <b>二無即新</b>　使此遊銭。軸人撃裁　即手其値。
-                <br>
-                別而其値　無亦一即　失其値而　手無之値。
-                <br>
-                別而始時　人力再裁。無失値即　人力連撃。
-                <br>
-                周人同撃　即手其値。其値互戦　大値此善。
-                <br>
-                上行之人　須手銭銭。銭多奮叫　此道無善。
-            </p>
 
+                <div class="number_and_xyr" style="width: 120pt;">
+                    <p style="width: 120pt; text-align:center;">
+                        <font size="15"><b><span id="result">0</span></b></font>
+                    </p>
+                    <div class="scoreboard" style="width: 120pt;">
+                        <span><img src="xyr_0.png" id="image1"></span>
+                        <span><img src="xyr_0.png" id="image2"></span>
+                        <span><img src="xyr_0.png" id="image3"></span>
+                        <span><img src="xyr_0.png" id="image4"></span>
+                        <span><img src="xyr_0.png" id="image5"></span>
+                    </div>
+                </div>
+                <br>
+                <font size="5">
+                    <div><b>値積　</b><span id="score"></span></div>
+                    <div><b>上時　</b><span id="history"></span></div>
+
+                    <font color="#d43700"><b>
+                            <div class="scoreboard" style="width: 240pt; height: 18pt;">
+                                <div style="width: 120pt;">全新値積　<span id="lastscore"></span></div>
+                                <div style="width: 120pt;">全大値積　<span id="highscore"></span></div>
+                            </div>
+                        </b>
+                    </font>
+                </font>
+                </div>
 </body>
 
 </html>
