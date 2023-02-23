@@ -31,19 +31,18 @@
             background: #005242;
             color: white;
         }
-
-
-
     </style>
 
     <script>
         const data = [];
+        const scoreboard = [];
 
         function reset() {
             data.length = 0;
             document.getElementById("result").innerHTML = '0';
             document.getElementById("history").innerHTML = '';
             document.getElementById("score").innerHTML = '';
+            document.getElementById("highscore").innerHTML = '';
         }
 
         function getDice() {
@@ -62,9 +61,16 @@
             document.getElementById("score").innerHTML = score;
 
             if (result < 2 && document.getElementById("checkbox").checked) {
+
+                scoreboard.push(score)
+                document.getElementById("lastscore").innerHTML = scoreboard[scoreboard.length - 1];
+                const highscore = Math.max(...scoreboard)
+                document.getElementById("highscore").innerHTML = highscore;
                 reset()
+
             }
         }
+
     </script>
 </head>
 
@@ -72,13 +78,30 @@
     <h1 class="linzklar_rounded">裁</h1>
     <a href="#" class="button" onclick="getDice();">撃裁</a>
     <a href="#" class="button" onclick="reset();">新裁<a>
-            <input type="checkbox" id="checkbox">無二即新
+            <input type="checkbox" id="checkbox" onchange="scoreboard()">二無即新
             <br>
-            <p>
-                <font size="5"><b><span id="result">0</span></b></font>
+            <p>　<font size="13"><b><span id="result">0</span></b></font>
             </p>
-            <p><b>値積 </b><span id="score"></span></p>
-            <p><b>上時 </b><span id="history"></span></p>
+            <p><b>値積　</b><span id="score"></span></p>
+            <p><b>上時　</b><span id="history"></span></p>
+            <font color="#d43700">
+                <p><b>全新値積　<span id="lastscore"></span></b></p>
+                <p><b>値積全大　<span id="highscore"></span></b></p>
+            </font>
+            <p>
+                撃<b>撃裁</b>即　人力撃裁。撃<b>新裁</b>即　其値入行。
+                <br>
+                <b>二無即新</b>　使此遊銭。軸人撃裁　即手其値。
+                <br>
+                別而其値　無亦一即　失其値而　手無之値。
+                <br>
+                別而始時　人力再裁。無失値即　人力連撃。
+                <br>
+                周人同撃　即手其値。其値互戦　大値此善。
+                <br>
+                上行之人　須手銭銭。銭多奮叫　此道無善。
+            </p>
+
 </body>
 
 </html>
