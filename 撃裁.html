@@ -78,12 +78,12 @@
 
 
         const converter = word => word
-            .replace(/00$/g, "百")
-            .replace(/^([1-9])0([1-9])$/g, "$1百$2")
-            .replace(/^1([1-9])([0-9])$/g, "百$1$2")
+            .replace(/00$/g, "Ⅽ")
+            .replace(/^([1-9])0([1-9])$/g, "$1Ⅽ$2")
+            .replace(/^1([1-9][0-9])$/g, "Ⅽ$1")
             .replace(/([1-9])(0)$/g, "$1\?")
-            .replace(/^1([1-9])$/g, "\?$1")
-            .replace(/1百/g, "百")
+            .replace(/1([1-9])$/g, "\?$1")
+            .replace(/1Ⅽ/g, "Ⅽ")
             .replace(/1\?$/g, "\?")
 
         function convert() {
