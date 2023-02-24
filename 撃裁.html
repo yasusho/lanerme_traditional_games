@@ -74,15 +74,34 @@
     <script>
         const history = [];
         const scoreboard = [];
+        let score = 0;
+
+
+        const converter = word => word
+            .replace(/00$/g, "百")
+            .replace(/1百/g, "百")
+            .replace(/^(10)([1-9])$]/g, "百$2")
+            .replace(/^(1)([1-9])([1-9])$]/g, "百$2$3")
+            .replace(/([2-9])(0)$/g, "$1\?")
+            .replace(/^(1)([1-9])$/g, "\?$2")
+            .replace(/^10$/g, "\?")
+
+        function convert() {
+            document.getElementById("times").innerHTML = converter(document.getElementById("times").innerHTML);
+            document.getElementById("lastscore").innerHTML = converter(document.getElementById("lastscore").innerHTML);
+            document.getElementById("highscore").innerHTML = converter(document.getElementById("highscore").innerHTML);
+        }
+
+
 
         function reset() {
             history.length = 0;
-            scoreboard.push(document.getElementById("lastscore").innerHTML)
+            scoreboard.push(score);
+            score = 0;
 
-            document.getElementById("result").innerHTML = '0';
-            document.getElementById("history").innerHTML = '0';
-            document.getElementById("times").innerHTML = null;
-
+            document.getElementById("result").innerHTML = 0;
+            document.getElementById("history").innerHTML = '';
+            document.getElementById("times").innerHTML = 0;
             document.getElementById("lastscore").innerHTML = scoreboard[scoreboard.length - 1];
             document.getElementById("highscore").innerHTML = Math.max(...scoreboard);
 
@@ -112,12 +131,13 @@
             document.getElementById('xyr').play();
 
             history.push(result);
-            const lastscore = history.reduce((sum, num) => sum + num, 0);
+            const x = history.reduce((sum, num) => sum + num, 0);
+            score = x
 
             document.getElementById("result").innerHTML = result;
             document.getElementById("history").innerHTML = history;
-            document.getElementById("times").innerHTML = history.length + "時";
-            document.getElementById("lastscore").innerHTML = lastscore;
+            document.getElementById("times").innerHTML = history.length;
+            document.getElementById("lastscore").innerHTML = score;
 
             if (result < 2 && document.getElementById("checkbox").checked) {
                 reset()
@@ -153,8 +173,8 @@
         周人同撃　即手其値。其値互戦　大値此善。上行之人　須手銭銭。銭多奮叫　此道無善。
     </div>
     <br>
-    <a href="#" class="button" onclick="getDice();">撃裁</a>
-    <a href="#" class="button" onclick="reset();">定裁<a>
+    <a href="#" class="button" onclick="getDice();convert()">撃裁</a>
+    <a href="#" class="button" onclick="reset();convert()">定裁<a>
             <a href="#" class="button_red" onclick="resetScoreboard();">新値積付<a></a>
                 <input type="checkbox" id="checkbox">
                 <font size="4"><b>二無即新</b></font>
@@ -175,12 +195,12 @@
                 <br>
                 <font size="5">
                     <font size="3">
-                        <div><b>上時　</b><span id="history">0</span>　<span id="times"></span></div>
+                        <div><b>上時<span id="times">0</span>時　</b><span id="history"></span>　</div>
                     </font>
                     <font color="#d43700"><b>
                             <div class="scoreboard" style="width: 320px;">
-                                <div style="width: 160px;">値積　<span id="lastscore">0</span></div>
-                                <div style="width: 160px;">全大値積　<span id="highscore">0</span></div>
+                                <div style="width: 160px;">全新　<span id="lastscore"></span></div>
+                                <div style="width: 160px;">全大　<span id="highscore"></span></div>
                             </div>
                         </b>
                     </font>
