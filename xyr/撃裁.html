@@ -81,6 +81,7 @@
         const scoreboard = [];
         let score = 0;
 
+        //燐数字的位取り表記に変換
         const converter = word => word
             .replace(/00$/g, "Ⅽ")
             .replace(/^([1-9])0([1-9])$/g, "$1Ⅽ$2")
@@ -90,32 +91,29 @@
             .replace(/1Ⅽ/g, "Ⅽ")
             .replace(/1\?$/g, "\?")
 
+        //数字表記適用
         function convert() {
             document.getElementById("times").innerHTML = converter(document.getElementById("times").innerHTML);
             document.getElementById("lastscore").innerHTML = converter(document.getElementById("lastscore").innerHTML);
             document.getElementById("highscore").innerHTML = converter(document.getElementById("highscore").innerHTML);
         }
 
+        //ボタン有効化
         function enable() {
-            if (history.length != 0) {
-                document.getElementById("reset").disabled = false;
-            }
-
-            if (score != 0 && scoreboard.length != 0) {
-                document.getElementById("reset_score").disabled = false;
-            }
+            document.getElementById("reset").disabled = history.length === 0;
+            document.getElementById("reset_score").disabled = scoreboard.length === 0;
         }
 
-        function disable() {
-            if (history.length == 0) {
-                document.getElementById("reset").disabled = true;
-            }
-
-            if (score == 0 && scoreboard.length == 0) {
-                document.getElementById("reset_score").disabled = true;
-            }
+        //音量調整
+        function handleVolumeChange() {
+            const xyr_sound = document.getElementById("xyr")
+            const cancel_sound = document.getElementById("cancel")
+            const elem_volume = document.getElementById("volume");
+            xyr_sound.volume = elem_volume.value;
+            cancel_sound.volume = elem_volume.value;
         }
 
+        //結果リセット
         function reset() {
             history.length = 0;
             scoreboard.push(score);
@@ -135,6 +133,15 @@
             document.getElementById("cancel").play();
         }
 
+        //ハイスコアリセット
+        function resetScoreboard() {
+            scoreboard.length = 0;
+            document.getElementById("lastscore").innerHTML = '';
+            document.getElementById("highscore").innerHTML = '';;
+            document.getElementById("cancel").play();
+        }
+
+        //ダイスロール
         function getDice() {
             const dice1 = Math.floor(Math.random() * 2);
             const dice2 = Math.floor(Math.random() * 2);
@@ -165,14 +172,6 @@
                 reset()
             }
         }
-
-        function resetScoreboard() {
-            scoreboard.length = 0;
-            document.getElementById("lastscore").innerHTML = '';
-            document.getElementById("highscore").innerHTML = '';;
-            document.getElementById("cancel").play();
-        }
-
     </script>
 </head>
 
@@ -195,39 +194,41 @@
         周人同撃　即手其値。其値互戦　大値此善。上行之人　須手銭銭。銭多奮叫　此道無善。
     </div>
     <br>
-    <button class="button" onclick="getDice();convert();enable();disable()">撃裁</button>
-    <button class="button" id="reset" disabled onclick="reset();convert();enable();disable()">定裁</button>
-    <button class="button_red" id="reset_score" disabled onclick="resetScoreboard();enable();disable();">新値積付</button>
+    <button class="button" onclick="getDice();convert();enable()">撃裁</button>
+    <button class="button" id="reset" disabled onclick="reset();convert();enable()">定裁</button>
+    <button class="button_red" id="reset_score" disabled onclick="resetScoreboard();enable()">新値積付</button>
     <input type="checkbox" id="checkbox">
     <font size="4"><b>二無失全</b></font>
-    <br>
+    <font size="4"><b>　声</b><input type="range" id="volume" min="0" max="1" step="0.1" value="0.5" onchange="handleVolumeChange()">
 
-    <div class="number_and_xyr" style="width: 160px;">
-        <p style="width: 160px; text-align:center;">
-            <font size="15"><b><span id="result">0</span></b></font>
-        </p>
-        <div class="xyr" style="width: 160px;">
-            <span><img src="xyr_0.png" id="image1"></span>
-            <span><img src="xyr_0.png" id="image2"></span>
-            <span><img src="xyr_0.png" id="image3"></span>
-            <span><img src="xyr_0.png" id="image4"></span>
-            <span><img src="xyr_0.png" id="image5"></span>
+        <br>
+
+        <div class="number_and_xyr" style="width: 160px;">
+            <p style="width: 160px; text-align:center;">
+                <font size="15"><b><span id="result">0</span></b></font>
+            </p>
+            <div class="xyr" style="width: 160px;">
+                <span><img src="xyr_0.png" id="image1"></span>
+                <span><img src="xyr_0.png" id="image2"></span>
+                <span><img src="xyr_0.png" id="image3"></span>
+                <span><img src="xyr_0.png" id="image4"></span>
+                <span><img src="xyr_0.png" id="image5"></span>
+            </div>
         </div>
-    </div>
-    <br>
-    <font size="5">
-        <font size="3">
-            <div><b>上時<span id="times">0</span>時　</b><span id="history"></span>　</div>
+        <br>
+        <font size="5">
+            <font size="3">
+                <div><b>上時<span id="times">0</span>時　</b><span id="history"></span>　</div>
+            </font>
+            <font color="#d43700"><b>
+                    <div class="scoreboard" style="width: 320px;">
+                        <div style="width: 160px;">全新　<span id="lastscore"></span></div>
+                        <div style="width: 160px;">全大　<span id="highscore"></span></div>
+                    </div>
+                </b>
+            </font>
         </font>
-        <font color="#d43700"><b>
-                <div class="scoreboard" style="width: 320px;">
-                    <div style="width: 160px;">全新　<span id="lastscore"></span></div>
-                    <div style="width: 160px;">全大　<span id="highscore"></span></div>
-                </div>
-            </b>
-        </font>
-    </font>
-    </div>
+        </div>
 </body>
 
 </html>
