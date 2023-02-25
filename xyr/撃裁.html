@@ -51,6 +51,10 @@
             color: white;
         }
 
+        button:disabled {
+            background: #aaaaaa
+        }
+
         .xyr {
             display: flex;
             justify-content: space-evenly;
@@ -77,7 +81,6 @@
         const scoreboard = [];
         let score = 0;
 
-
         const converter = word => word
             .replace(/00$/g, "Ⅽ")
             .replace(/^([1-9])0([1-9])$/g, "$1Ⅽ$2")
@@ -93,7 +96,25 @@
             document.getElementById("highscore").innerHTML = converter(document.getElementById("highscore").innerHTML);
         }
 
+        function enable() {
+            if (history.length != 0) {
+                document.getElementById("reset").disabled = false;
+            }
 
+            if (score != 0 && scoreboard.length != 0) {
+                document.getElementById("reset_score").disabled = false;
+            }
+        }
+
+        function disable() {
+            if (history.length == 0) {
+                document.getElementById("reset").disabled = true;
+            }
+
+            if (score == 0 && scoreboard.length == 0) {
+                document.getElementById("reset_score").disabled = true;
+            }
+        }
 
         function reset() {
             history.length = 0;
@@ -174,39 +195,39 @@
         周人同撃　即手其値。其値互戦　大値此善。上行之人　須手銭銭。銭多奮叫　此道無善。
     </div>
     <br>
-    <a href="#" class="button" onclick="getDice();convert()">撃裁</a>
-    <a href="#" class="button" onclick="reset();convert()">定裁<a>
-            <a href="#" class="button_red" onclick="resetScoreboard();">新値積付<a></a>
-                <input type="checkbox" id="checkbox">
-                <font size="4"><b>二無失全</b></font>
-                <br>
+    <button class="button" onclick="getDice();convert();enable();disable()">撃裁</button>
+    <button class="button" id="reset" disabled onclick="reset();convert();enable();disable()">定裁</button>
+    <button class="button_red" id="reset_score" disabled onclick="resetScoreboard();enable();disable();">新値積付</button>
+    <input type="checkbox" id="checkbox">
+    <font size="4"><b>二無失全</b></font>
+    <br>
 
-                <div class="number_and_xyr" style="width: 160px;">
-                    <p style="width: 160px; text-align:center;">
-                        <font size="15"><b><span id="result">0</span></b></font>
-                    </p>
-                    <div class="xyr" style="width: 160px;">
-                        <span><img src="xyr_0.png" id="image1"></span>
-                        <span><img src="xyr_0.png" id="image2"></span>
-                        <span><img src="xyr_0.png" id="image3"></span>
-                        <span><img src="xyr_0.png" id="image4"></span>
-                        <span><img src="xyr_0.png" id="image5"></span>
-                    </div>
+    <div class="number_and_xyr" style="width: 160px;">
+        <p style="width: 160px; text-align:center;">
+            <font size="15"><b><span id="result">0</span></b></font>
+        </p>
+        <div class="xyr" style="width: 160px;">
+            <span><img src="xyr_0.png" id="image1"></span>
+            <span><img src="xyr_0.png" id="image2"></span>
+            <span><img src="xyr_0.png" id="image3"></span>
+            <span><img src="xyr_0.png" id="image4"></span>
+            <span><img src="xyr_0.png" id="image5"></span>
+        </div>
+    </div>
+    <br>
+    <font size="5">
+        <font size="3">
+            <div><b>上時<span id="times">0</span>時　</b><span id="history"></span>　</div>
+        </font>
+        <font color="#d43700"><b>
+                <div class="scoreboard" style="width: 320px;">
+                    <div style="width: 160px;">全新　<span id="lastscore"></span></div>
+                    <div style="width: 160px;">全大　<span id="highscore"></span></div>
                 </div>
-                <br>
-                <font size="5">
-                    <font size="3">
-                        <div><b>上時<span id="times">0</span>時　</b><span id="history"></span>　</div>
-                    </font>
-                    <font color="#d43700"><b>
-                            <div class="scoreboard" style="width: 320px;">
-                                <div style="width: 160px;">全新　<span id="lastscore"></span></div>
-                                <div style="width: 160px;">全大　<span id="highscore"></span></div>
-                            </div>
-                        </b>
-                    </font>
-                </font>
-                </div>
+            </b>
+        </font>
+    </font>
+    </div>
 </body>
 
 </html>
