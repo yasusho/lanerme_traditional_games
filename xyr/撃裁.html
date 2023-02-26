@@ -17,12 +17,17 @@
             font-family: "linzklar_rounded";
         }
 
+        body {
+            background-color: #ebe4dc;
+        }
+
         .button {
             display: inline-block;
             padding: 0.3em 1em;
             text-decoration: none;
             font-size: large;
             font-weight: bold;
+            background: white;
             color: #005242;
             border: solid 2px #005242;
             border-radius: 3px;
@@ -40,6 +45,7 @@
             text-decoration: none;
             font-size: large;
             font-weight: bold;
+            background: white;
             color: #d43700;
             border: solid 2px #d43700;
             border-radius: 3px;
@@ -52,7 +58,14 @@
         }
 
         button:disabled {
-            background: #aaaaaa
+            color: #aaaaaa;
+            border: solid 2px #aaaaaa;
+            background: white;
+        }
+
+        button:disabled:hover {
+            color: #aaaaaa;
+            background: white;
         }
 
         .xyr {
@@ -199,7 +212,8 @@
     <button class="button_red" id="reset_score" disabled onclick="resetScoreboard();enable()">新値積付</button>
     <input type="checkbox" id="checkbox">
     <font size="4"><b>二無失全</b></font>
-    <font size="4"><b>　声</b><input type="range" id="volume" min="0" max="1" step="0.1" value="0.5" onchange="handleVolumeChange()">
+    <font size="4"><b>　声</b><input type="range" id="volume" min="0" max="1" step="0.1" value="0.5"
+            onchange="handleVolumeChange()">
 
         <br>
 
