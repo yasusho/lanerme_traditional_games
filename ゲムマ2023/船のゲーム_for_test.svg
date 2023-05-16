@@ -24,9 +24,9 @@
      inkscape:deskcolor="#d1d1d1"
      inkscape:document-units="mm"
      showgrid="false"
-     inkscape:zoom="0.46089927"
-     inkscape:cx="236.49419"
-     inkscape:cy="786.50591"
+     inkscape:zoom="0.325905"
+     inkscape:cx="329.85072"
+     inkscape:cy="630.55185"
      inkscape:window-width="1920"
      inkscape:window-height="1191"
      inkscape:window-x="-9"
@@ -53,7 +53,7 @@
      id="layer1">
     <g
        id="g22787"
-       transform="translate(-11.247035)">
+       transform="translate(-27.122036)">
       <text
          xml:space="preserve"
          style="font-size:3.949px;line-height:1.5;font-family:linzklar_rounded;-inkscape-font-specification:linzklar_rounded;text-align:justify;writing-mode:tb-rl;fill:#005242;fill-opacity:1;stroke:#005242;stroke-width:0.499996;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:1;paint-order:markers fill stroke"
@@ -81,7 +81,7 @@
     </g>
     <g
        id="g22803"
-       transform="translate(-8.2293383)">
+       transform="translate(-24.104339)">
       <path
          style="fill:#005242;fill-opacity:1;stroke:none;stroke-width:1;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke"
          d="m 125.79872,62.772188 1.32699,0.617924 v 4.890677 l -1.01624,-0.589607 0.10029,-0.673026 -0.007,-3.248831 z"
@@ -181,7 +181,7 @@
     </g>
     <g
        id="g22820"
-       transform="translate(-4.9093256)">
+       transform="translate(-15.360368)">
       <path
          style="fill:#005242;fill-opacity:1;stroke:none;stroke-width:1;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke"
          d="m 139.08947,62.772187 1.32701,0.617923 v 4.890677 l -1.01627,-0.589608 0.10029,-0.673025 -0.007,-3.248832 z"
@@ -286,7 +286,7 @@
     </g>
     <g
        id="g22838"
-       transform="translate(-1.589319)">
+       transform="translate(-6.616403)">
       <path
          style="fill:#005242;fill-opacity:1;stroke:none;stroke-width:1;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke"
          d="m 152.30986,62.772189 1.327,0.617923 v 4.890678 l -1.01627,-0.589608 0.1003,-0.673026 -0.007,-3.248831 z"
@@ -396,7 +396,7 @@
     </g>
     <g
        id="g22865"
-       transform="translate(0.71731197)">
+       transform="translate(5.1880906)">
       <path
          style="fill:#005242;fill-opacity:1;stroke:none;stroke-width:0.999994;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke"
          d="m 162.55718,64.164515 1.03556,0.482214 v 3.453601 l -0.79304,-0.460116 0.0785,-0.525215 -0.004,-2.172342 z"
@@ -615,7 +615,7 @@
        y="7.2561436" />
     <g
        id="g22897"
-       transform="translate(5.1571307)">
+       transform="translate(21.032131)">
       <rect
          style="fill:#005242;fill-opacity:1;stroke:#005242;stroke-width:0.5;stroke-linecap:round;stroke-linejoin:miter;stroke-opacity:1;paint-order:markers fill stroke"
          id="rect13637"
