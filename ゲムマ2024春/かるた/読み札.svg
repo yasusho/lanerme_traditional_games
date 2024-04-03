@@ -24,9 +24,9 @@
      inkscape:deskcolor="#d1d1d1"
      inkscape:document-units="mm"
      showguides="true"
-     inkscape:zoom="1.4485269"
-     inkscape:cx="4163.1949"
-     inkscape:cy="144.62969"
+     inkscape:zoom="0.36213173"
+     inkscape:cx="836.71211"
+     inkscape:cy="-78.700644"
      inkscape:window-width="1920"
      inkscape:window-height="1009"
      inkscape:window-x="-8"
@@ -165,7 +165,10 @@
        height="76.356003"
        id="page162"
        margin="0"
-       bleed="0" />
+       bleed="0"
+       inkscape:export-filename="15 ページa.png"
+       inkscape:export-xdpi="96"
+       inkscape:export-ydpi="96" />
     <inkscape:page
        x="1024"
        y="0"
@@ -614,27 +617,22 @@
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10.4034px;line-height:1;font-family:acil_lujot;-inkscape-font-specification:acil_lujot;text-align:center;letter-spacing:0px;text-anchor:middle;fill:#000000;stroke:none;stroke-width:0.522999;stroke-dasharray:none;paint-order:fill markers stroke"
        x="602.974"
-       y="33.507069"
+       y="37.397942"
        id="text112"><tspan
          sodipodi:role="line"
          id="tspan112"
          style="stroke-width:0.523"
          x="602.974"
-         y="33.507069">LEME E PALBI</tspan><tspan
+         y="37.397942">LEME E PALBI</tspan><tspan
          sodipodi:role="line"
          style="stroke-width:0.523"
          x="602.974"
-         y="43.910469"
-         id="tspan113"> PI</tspan><tspan
+         y="47.801342"
+         id="tspan1"> PI NUKIL E</tspan><tspan
          sodipodi:role="line"
          style="stroke-width:0.523"
          x="602.974"
-         y="54.313869"
-         id="tspan114">NUKIL E</tspan><tspan
-         sodipodi:role="line"
-         style="stroke-width:0.523"
-         x="602.974"
-         y="64.71727"
+         y="58.204742"
          id="tspan115">PALBIC</tspan></text>
     <text
        xml:space="preserve"
@@ -728,7 +726,7 @@
        id="text126"><tspan
          sodipodi:role="line"
          id="tspan126"
-         style="stroke-width:0.523"></tspan></text>
+         style="stroke-width:0.523" /></text>
     <text
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:15.7712px;line-height:1;font-family:xedixel;-inkscape-font-specification:xedixel;letter-spacing:0px;fill:#000000;stroke-width:0.522999;paint-order:fill markers stroke"
@@ -892,7 +890,7 @@
        id="text164"><tspan
          sodipodi:role="line"
          id="tspan164"
-         style="stroke-width:0.523"></tspan></text>
+         style="stroke-width:0.523" /></text>
     <text
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10.4034px;line-height:1;font-family:acil_lujot;-inkscape-font-specification:acil_lujot;text-align:center;letter-spacing:0px;text-anchor:middle;fill:#000000;stroke:none;stroke-width:0.522999;stroke-dasharray:none;paint-order:fill markers stroke"
@@ -1020,6 +1018,6 @@
        id="text196"><tspan
          sodipodi:role="line"
          id="tspan196"
-         style="stroke-width:0.523"></tspan></text>
+         style="stroke-width:0.523" /></text>
   </g>
 </svg>
