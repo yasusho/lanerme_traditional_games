@@ -31,7 +31,7 @@
      inkscape:cy="90.30454"
      inkscape:window-width="826"
      inkscape:window-height="720"
-     inkscape:window-x="-7"
+     inkscape:window-x="0"
      inkscape:window-y="0"
      inkscape:window-maximized="0"
      inkscape:current-layer="layer1" />
@@ -43,7 +43,7 @@
      id="layer1"
      transform="translate(-14.017311,-93.862518)">
     <rect
-       style="fill:none;stroke:#000000;stroke-width:1;stroke-opacity:1"
+       style="fill:#ffffff;stroke:#000000;stroke-width:1;stroke-opacity:1"
        id="rect1"
        width="50"
        height="70.710678"
