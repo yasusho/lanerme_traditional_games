@@ -1,8 +1,8 @@
 遊人二亦三亦四	Players: 2 to 4
 時片始一行二	Playing time: 15 to 30 minutes
 手片如机戦。手値如終季！	Capture pieces just like Cetkaik! Earn scores just like Tashot!
-汝引官人而心生善官。	Your job is to hire [⌛] and seek to [⌛] a good [⌛].
-急於全人而硬於全人即為生友連！	
+汝引官人而心生善官。	Your job is to hire government officials and seek to form a good government.
+急於全人而硬於全人即為生友連！	Be the first to [⌛] 
 遊術行道	How to play
 始手片斥片而行衣上之片而手片。	
 再々為此而手集心受之片。	
@@ -13,7 +13,7 @@
 裁値之石	Stones to keep track of the scores
 衣	Cloth board
 五裁	Five dice-sticks
-片（二色。皇色兵片加白色筆片。全六十八片）	Pieces (Two colors. Green: [⌛兵], White: [⌛筆]. 68 pieces in total)
+片（二色。皇色兵片加白色筆片。全六十八片）	Pieces (Two colors. Green: Site Workers, White: [⌛筆]. 68 pieces in total)
 歪片	Jokers
 遊術上裁	
 目人之多少而定片之多少。	
@@ -39,41 +39,41 @@
 為終遊人多少之季亦全人満心之時遊終。	
 日行	Day
 遊人於日行々為下之労件。	
-無亦一時 斥値而手其時開之友連再閉。（心古行新）	
-無亦一時 開手片之一友連而手値。（与労）	
-一時 始手片斥一片而行衣上之片而手片。（引人）	
-汝須識々須為「引人」。	
+無亦一時 斥値而手其時開之友連再閉。（心古行新）	Optionally, you return points and reconceal the set that you have previously revealed at that time. (“Dissolving a Department”)
+無亦一時 開手片之一友連而手値。（与労）	Optionally, you reveal some pieces in your hand that can form a set, and obtain some score. (“Forming a Department”)
+一時 始手片斥一片而行衣上之片而手片。（引人）	[⌛] (“Hiring”)
+汝須識々須為「引人」。	Note that Hiring is mandatory.
 引人（須為）	Hiring (mandatory)
 始手片斥一片而行衣上之片而手片。	
-手斥片付衣上静囲。	
+手斥片付衣上静囲。	Discard one of the pieces in your hand onto the empty square on the board.
 能行之片生斥片之同色而大一位亦小一位之片。	
 汝須無生来斥片而片無能行之時。	
 片能行於周己之八囲。	A piece can move to one of the eight squares that surround it.
 行入之処之片普時手此。	
-始山行術	
+始山行術	When moving from the Mountain
 皇山此皇色之囲。在山之片享皇之神力而能行於多多囲。	“Tam’s Mountain” is the green square. The piece on the mountain receives Tam’s mystical power and can go to a larger number of squares.
-行術如絵。如皇字。	
+行術如絵。如皇字。	The move is as shown in the diagram below, resembling the Lanermic character for “Tam” (皇).
 在道之片汝能無目。	You can ignore the intervening piece.
 入水之時	When entering the water
-皇水此水色之囲。入於水此極硬。	
+皇水此水色之囲。入於水此極硬。	“Tam’s Water” is the blue square. It is very difficult to enter the water.
 汝行片而心手皇水之片之時汝須撃裁。	
-裁無亦一亦二即汝手汝行之片。	
-三亦四亦五即汝手行処皇水之片。	
+裁無亦一亦二即汝手汝行之片。	When it is zero, one or two, you obtain the piece that you were moving.
+三亦四亦五即汝手行処皇水之片。	When three, four or five, you obtain the piece that is in the water square that you are moving to.
 歪片裁術	Jokers
-汝使歪片能為別片之労。	
-此故始手片斥歪片之時汝能行衣上之或色或位之片。	
-逆道衣上歪片此斥或色或位而能行此。	
-与労（全多一時）（無為此善）	[⌛] (optional)
-於手片三片之友連在即能為此労。	
-開其友連而手加値。	
-開片此手片別而無能斥。為心古行新之労即唯再斥。	
+汝使歪片能為別片之労。	You can use a joker to serve as the role of another piece.
+此故始手片斥歪片之時汝能行衣上之或色或位之片。	Thus, when you discard a joker, you can move an arbitrary piece on the board.
+逆道衣上歪片此斥或色或位而能行此。	Oppositely, when there is a joker on the board, you can discard a piece of any color and number in order to be qualified to move the joker.
+与労（全多一時）（無為此善）	Forming a Department (optional)
+於手片三片之友連在即能為此労。	When three pieces in your hand can form a three-of-a-kind or a sequence-of-three, you can perform this action.
+開其友連而手加値。	You reveal the set and earn the bonus score.
+開片此手片別而無能斥。為心古行新之労即唯再斥。	The revealed pieces remain in your hand, but they cannot be discarded. [⌛]
 三友	Three-of-a-kind
 同色同値三片	Three pieces with the same color and the same number
 三連	Sequence-of-three
 同色連値三片	Three pieces with the same color and the consecutive numbers
 端値無連	The numbers do not wrap around.
 加値	Bonus score
-目友連全大之片而手加値。	
+目友連全大之片而手加値。	Find the piece with the largest number on it and earn the bonus score based on that number.
 目棚絵定加値。	Look at the table below and determine the bonus score.
 使歪片於全大之片之時手無真之値之加値。	
 三友之加値三層。	
@@ -85,23 +85,23 @@
 全大此歪。此時三	Joker is the largest. Here, it serves as a 3.
 三生一値即三友三層此故三値。	3 gives one point. [⌛]
 一片歪片在即加値二値。	Since there is a single joker, the bonus score is reduced to two points.
-国官集来！	
+国官集来！	Lauzait-Cep!
 或人開三位友連而手其友連之加値即其人言「国官集来！」而再受集来値。	
 妙時開片無而三友連在手片之時同言「国官集来！」而再受集来値。	
 此時無能手開片加値。	
 集来値之全	
-国官集来	
+国官集来	Lauzait-Cep
 軸道論集	
 全片同色	All the pieces have the same color
 大連	Great Sequence
 九連値	nine consecutive numbers 
 層橋	Layered Bridge
 於手片同値之二友連在	
-無須同色。友善連善。	
+無須同色。友善連善。	Does not have to be the same color. It can either be a three-of-a-kind or a sequence-of-three.
 筆兵無傾	
-筆之積値加兵之積値同	The sum of the numbers on the [⌛筆] card matches that of the [⌛兵] card
+筆之積値加兵之積値同	The sum of the numbers on the [⌛筆] card matches that of the Site Workers card
 （歪片無目）	
-闇戦之集	
+闇戦之集	Stalemate
 無能為。	When no action can be taken.
 引人之時能斥之片此無在。反行上時而為心古行新即同為術無之時唯目此。	
 闇戦之集此妙時。其時無目手片友連而言「国官集来！」	
@@ -132,7 +132,7 @@
 筆処集 皇光男	Tam Aikki, from Quahua Province
 別於官定机戦汝須撃裁。	Unlike the standard rule of Cetkaik, you need to throw dice-sticks in such a situation.
 為此律軟。	This is in order to simplify the rule.
-使歪片於豊銭与労而於貧銭心古行新之件此善乎	Is it okay to use a joker to obtain some money and afterwards return less money by dissolving the [⌛]?
+使歪片於豊銭与労而於貧銭心古行新之件此善乎	Is it okay to use a joker to obtain some money and afterwards return less money by dissolving the department?
 車馬集 筆座leledapa	Kasika Lélédapa, Kutia Province
 即遊術行混混。	That would plunge the game into chaos.
 於此位圧我等筆加行。	We have amended it in the current version.
