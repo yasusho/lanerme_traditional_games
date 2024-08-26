@@ -32,11 +32,11 @@
 定軸人而定遊術周行。	
 於此時目豊貧而貧於全人即其人此軸人。	
 目軸人右左而貧人端生遊術周行之道。 	
-其人多之時其季生遊術一位之時撃裁而定軸人加周行(z)	
+其人多之時其季生遊術一位之時撃裁而定軸人加周行(z)	When there are multiple players satisfying the condition, or when it is the first round, throw the dice-sticks to determine the start player and the order of play. (f)
 季行	Season
 於季遊人行々再々為日。	In each Season, players take turn and spend Days.
 於或人言「国官集来！」之時裁値而季終而新季始来。	The Season ends when a player declares “Lauzait-Cep”. Scores are calculated and the new Season starts.
-為終遊人多少之季亦全人満心之時遊終。	
+為終遊人多少之季亦全人満心之時遊終。	The game ends after the same number of rounds as there are players, or when all players are satisfied and decide to end the game.
 日行	Day
 遊人於日行々為下之労件。	On each Day, players perform the following actions in order.
 無亦一時 斥値而手其時開之友連再閉。（心古行新）	[none/once] You return points and reconceal the set that you have previously revealed at that time. (“Dissolving a Department”)
@@ -83,12 +83,12 @@
 全大此五。	5 is the largest.
 五生二値即加値二値。	5 gives two points; the bonus score is two.
 全大此歪。此時三	Joker is the largest. Here, it serves as a 3.
-三生一値即三友三層此故三値。	3 gives one point. [⌛]
+三生一値即三友三層此故三値。	3 gives one point. Since this is a three-of-a-kind, the bonus score is tripled, resulting in three points.
 一片歪片在即加値二値。	Since there is a single joker, the bonus score is reduced to two points.
 国官集来！	Lauzait-Cep!
 或人開三位友連而手其友連之加値即其人言「国官集来！」而再受集来値。	After revealing the third set and earning the bonus score associated with the set, the player declares “Lauzait-Cep!” and receives the [⌛] score.
-妙時開片無而三友連在手片之時同言「国官集来！」而再受集来値。	
-此時無能手開片加値。	
+妙時開片無而三友連在手片之時同言「国官集来！」而再受集来値。	As an exception, if you have not revealed any pieces and have three valid combinations in your hand, you can declare "Lauzait-Cep!"" to gain the [⌛] score.
+此時無能手開片加値。	In such a situation, you cannot earn the bonus score that would have been obtainable by revealing the sets.
 集来値之全	The list of all [⌛] scores
 国官集来	Lauzait-Cep (pronounced LOUD-site SEP)
 軸道論集	Specialized Experts
@@ -103,11 +103,11 @@
 （歪片無目）	(Jokers are ignored)
 闇戦之集	Stalemate
 無能為。	When no action can be taken.
-引人之時能斥之片此無在。反行上時而為心古行新即同為術無之時唯目此。	
+引人之時能斥之片此無在。反行上時而為心古行新即同為術無之時唯目此。	A situation in which there is no piece to discard during the hiring phase. It is considered a stalemate only if dissolving the department earlier was not an option to avoid this outcome.
 闇戦之集此妙時。其時無目手片友連而言「国官集来！」	Stalemate is a special situation which, regardless of the combination of pieces in your hand, you declare “Lauzait-Cep!”
 言「国官集来！」即裁値而季終。	When “Lauzait-Cep!” is declared, the scores are calculated and the Season ends.
-其季無遊術全下即始「季之上裁」始季。	
-心古行新（全多一時）（無為此善）	
+其季無遊術全下即始「季之上裁」始季。	When the Season is not the final one, the setup for the next Season is performed and the new Season begins.
+心古行新（全多一時）（無為此善）	Dissolving a Department (at most once) (optional)
 妙時圧眉古時与労而手加値。	Sometimes, you regret what you have done in the past to obtain the score.
 其時汝識心古行新之術。	In such cases, you can dissolve a department.
 為此之時手其時開之友連再閉而反与開時手之加値。	To perform this action, you reconceal the set that you have previously revealed, and refund the bonus score that you have obtained at that time.
@@ -115,7 +115,7 @@
 無正如此。開「二三歪」手二値而下時汝心古行新「歪二三」反与一値。	An example of an incorrect refund is when you form a department as “2-3-Joker” and obtain two points but you dissolve it as “Joker-2-3” and refund one point.
 悪享此使硬力須圧。	Benefit fraud must be heavily prosecuted.
 遊術終時	End of the game
-為終遊人多少之季亦全人満心之時遊終。	
+為終遊人多少之季亦全人満心之時遊終。	The game ends after the same number of rounds as there are players, or when all players are satisfied and decide to end the game.
 其時全豊人上行。	The player with the highest score at that time wins.
 全豊人多之時其之全人上行。	When there are multiple players with the highest score, they all win.
 加律	Additional rules
