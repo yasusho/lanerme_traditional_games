@@ -3,14 +3,14 @@
 手片如机戦。手値如終季！	Capture pieces just like Cetkaik! Earn scores just like Tashot!
 汝引官人而心生善官。	Your job is to hire government officials and seek to form a good government.
 急於全人而硬於全人即為生友連！	Be the first to [⌛] 
-遊術行道	How to play
-始手片斥片而行衣上之片而手片。	
-再々為此而手集心受之片。	
-於手片善之友連在即開此而能手値。	
-裁激手片而行手大値！	
+遊術行道	How the game goes
+始手片斥片而行衣上之片而手片。	Discard a piece, move a piece on the board, and obtain a piece.
+再々為此而手集心受之片。	Repeat this to collect the pieces that you want.
+於手片善之友連在即開此而能手値。	When you have an appropriate combination of pieces in your hand, reveal it and earn some score.
+裁激手片而行手大値！	[⌛Arrange] your hand quickly and aim for a high score!
 箱内	Content
 書（此）	This leaflet
-裁値之石	Stones to keep track of the scores
+裁値之石	Tokens to keep track of the scores
 衣	Cloth board
 五裁	Five dice-sticks
 片（二色。皇色兵片加白色筆片。全六十八片）	Pieces (Two colors. Green: Site Workers, White: [⌛筆]. 68 pieces in total)
@@ -20,9 +20,9 @@
 人四即使全片。	4 people: use all pieces
 人三即失全「無」。	3 people: remove all 0s.
 人二即失全「無」加二「歪」。	2 people: remove all 0s and two jokers.
-付衣於全人手軸能行之処。(p)	
-遊人定赤青黒硫之一而労於汝色之衣端。(b)	
-毎人手其色之石付於値直之「無」。(m)	
+付衣於全人手軸能行之処。(p)	Place the cloth board within reach of all players. (a)
+遊人定赤青黒硫之一而労於汝色之衣端。(b)	Each player chooses one of the four colors: red, blue, black, or yellow, and sits at the corresponding edge of the board. (b)
+毎人手其色之石付於値直之「無」。(m)	Each player places a token of their color on the position 0 (無) of the score track. (c)
 季之上裁	
 閉混全片。与九手片。	Mix all the pieces face down. Give nine pieces to each player.
 汝立汝之手片而別人無能目汝之手片。(c)	Be sure to make the pieces stand so that other players cannot peek at yours. (d)
@@ -38,10 +38,10 @@
 於或人言「国官集来！」之時裁値而季終而新季始来。	The Season ends when a player declares “Lauzait-Cep”. Scores are calculated and the new Season starts.
 為終遊人多少之季亦全人満心之時遊終。	
 日行	Day
-遊人於日行々為下之労件。	
-無亦一時 斥値而手其時開之友連再閉。（心古行新）	Optionally, you return points and reconceal the set that you have previously revealed at that time. (“Dissolving a Department”)
-無亦一時 開手片之一友連而手値。（与労）	Optionally, you reveal some pieces in your hand that can form a set, and obtain some score. (“Forming a Department”)
-一時 始手片斥一片而行衣上之片而手片。（引人）	[⌛] (“Hiring”)
+遊人於日行々為下之労件。	On each Day, players perform the following actions in order.
+無亦一時 斥値而手其時開之友連再閉。（心古行新）	[none/once] You return points and reconceal the set that you have previously revealed at that time. (“Dissolving a Department”)
+無亦一時 開手片之一友連而手値。（与労）	[none/once] You reveal some pieces in your hand that can form a set, and obtain some score. (“Forming a Department”)
+一時 始手片斥一片而行衣上之片而手片。（引人）	[once] [⌛] (“Hiring”)
 汝須識々須為「引人」。	Note that Hiring is mandatory.
 引人（須為）	Hiring (mandatory)
 始手片斥一片而行衣上之片而手片。	You discard a piece, move another piece on the board, and obtain a piece.
@@ -104,8 +104,8 @@
 闇戦之集	Stalemate
 無能為。	When no action can be taken.
 引人之時能斥之片此無在。反行上時而為心古行新即同為術無之時唯目此。	
-闇戦之集此妙時。其時無目手片友連而言「国官集来！」	
-言「国官集来！」即裁値而季終。	
+闇戦之集此妙時。其時無目手片友連而言「国官集来！」	Stalemate is a special situation which, regardless of the combination of pieces in your hand, you declare “Lauzait-Cep!”
+言「国官集来！」即裁値而季終。	When “Lauzait-Cep!” is declared, the scores are calculated and the Season ends.
 其季無遊術全下即始「季之上裁」始季。	
 心古行新（全多一時）（無為此善）	
 妙時圧眉古時与労而手加値。	Sometimes, you regret what you have done in the past to obtain the score.
