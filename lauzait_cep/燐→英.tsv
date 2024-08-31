@@ -20,15 +20,15 @@
 人四即使全片。	4 people: use all pieces
 人三即失全「無」。	3 people: remove all 0s.
 人二即失全「無」加二「歪」。	2 people: remove all 0s and two jokers.
-付衣於全人手軸能行之処。(p)	Place the cloth board within reach of all players. (a)
-遊人定赤青黒硫之一而労於汝色之衣端。(b)	Each player chooses one of the four colors: red, blue, black, or yellow, and sits at the corresponding edge of the board. (b)
-毎人手其色之石付於値直之「無」。(m)	Each player places a token of their color on the position 0 (無) of the score track. (c)
+付衣於全人手軸能行之処。(p)	Place the cloth board within reach of all players. (A)
+遊人定赤青黒硫之一而労於汝色之衣端。(b)	Each player chooses one of the four colors: red, blue, black, or yellow, and sits at the corresponding edge of the board. (B)
+毎人手其色之石付於値直之「無」。(m)	Each player places a token of their color on the position 0 (無) of the score track. (C)
 季之上裁	Setup for each Season
 閉混全片。与九手片。	Mix all the pieces face down. Give nine pieces to each player.
-汝立汝之手片而別人無能目汝之手片。(c)	Be sure to make the pieces stand so that other players cannot peek at yours. (d)
+汝立汝之手片而別人無能目汝之手片。(c)	Be sure to make the pieces stand so that other players cannot peek at yours. (D)
 手残片之内二十四片付開於衣。	Take twenty-four of the remaining pieces and place them face up on the cloth board.
 於軸処之山片無。	There shall be no pieces on the central square (the Mountain).
-残片無開。(x)	The remaining pieces are kept face down. (e)
+残片無開。(x)	The remaining pieces are kept face down. (E)
 定軸人而定遊術周行。	Determine the starting player and play order.
 於此時目豊貧而貧於全人即其人此軸人。	The player with the fewest points becomes the starting player.
 目軸人右左而貧人端生遊術周行之道。 	The game proceeds clockwise or counterclockwise, depending on which of the two players next to the starting player has the fewer points.
@@ -45,32 +45,32 @@
 汝須識々須為「引人」。	Note that Hiring is mandatory.
 引人（須為）	Hiring (mandatory)
 始手片斥一片而行衣上之片而手片。	You discard a piece, move another piece on the board, and obtain a piece.
-手斥片付衣上静囲。	You start by discarding one of the pieces in your hand onto the empty square on the board.
-能行之片生斥片之同色而大一位亦小一位之片。	The piece that you can move must be of the same color as the discarded piece, and its number must be one greater or one less.
-勿生来斥片而片無能行之時。	It is forbidden to discard a piece that has no corresponding piece on the board, as it would be impossible to move any piece in such a situation.
-片能行於周己之八囲。	A piece can move to one of the eight squares that surround it.
-行入之処之片普時手此。	Usually, the piece you obtain is the one that was occupying the destination of your movement.
+手斥片付衣上静囲。	Discard a piece in your hand onto the empty square,
+能行之片生斥片之同色而大一位亦小一位之片。	then choose  a piece of the same color and adjacent number (±1) and move to one of the eight surrounding squares.
+勿生来斥片而片無能行之時。	You cannot discard a piece with no corresponding piece on the board, as it would be impossible to move any piece in such a situation.
+片能行於周己之八囲。	[[<Already incorporated in line 49>]]
+行入之処之片普時手此。	The piece you obtain is typically the one occupying your move’s destination.
 始山行術	When moving from the Mountain
 皇山此皇色之囲。在山之片享皇之神力而能行於多多囲。	“Tam’s Mountain” is the green square. The piece on the mountain receives Tam’s mystical power and can go to a larger number of squares.
-行術如絵。如皇字。	The move is as shown in the diagram below, resembling the Lanermic character for “Tam” (皇).
+行術如絵。如皇字。	The move is as shown below, resembling the Lanermic character for “Tam” (皇).
 在道之片汝能無目。	You can ignore the intervening piece.
 入水之時	When entering the water
 皇水此水色之囲。入於水此極硬。	“Tam’s Water” is the blue square. It is very difficult to enter the water.
 汝行片而心手皇水之片之時汝須撃裁。	When you move the piece and try to obtain a piece in the water square, you need to throw the dice-sticks.
-裁無亦一亦二即汝手汝行之片。	When it is zero, one or two, you obtain the piece that you were moving.
-三亦四亦五即汝手行処皇水之片。	When three, four or five, you obtain the piece that is in the water square that you are moving to.
+裁無亦一亦二即汝手汝行之片。	When it is zero, one or two, you obtain the piece that tried to move.
+三亦四亦五即汝手行処皇水之片。	When three, four or five, you obtain the piece that is in the water square you are moving to.
 歪片裁術	Jokers
 汝使歪片能為別片之労。	You can use a joker to serve as the role of another piece.
 此故始手片斥歪片之時汝能行衣上之或色或位之片。	Thus, when you discard a joker, you can move an arbitrary piece on the board.
 逆道衣上歪片此斥或色或位而能行此。	Oppositely, when there is a joker on the board, you can discard a piece of any color and number in order to be qualified to move the joker.
 与労（全多一時）（無為此善）	Forming a Department (optional)
 於手片三片之友連在即能為此労。	When three pieces in your hand can form a three-of-a-kind or a sequence-of-three, you can perform this action.
-開其友連而手加値。	You reveal the set and earn the bonus score.
-開片此手片別而無能斥。為心古行新之労即唯再斥。	The revealed pieces remain in your hand, but they cannot be discarded. The only way to discard them is to dissolve the department.
+開其友連而手加値。	You reveal the Department and earn the bonus score.
+開片此手片別而無能斥。為心古行新之労即唯再斥。	The revealed pieces remain in your hand, but they cannot be discarded. The only way to discard them is to dissolve the Department.
 三友	Three-of-a-kind
 同色同値三片	Three pieces with the same color and the same number
 三連	Sequence-of-three
-同色連値三片	Three pieces with the same color and the consecutive numbers
+同色連値三片	Three pieces with the same color and the consecutive numbers.
 端値無連	The numbers do not wrap around.
 加値	Bonus score
 目友連全大之片而手加値。	Find the piece with the largest number on it and earn the bonus score based on that number.
@@ -82,11 +82,11 @@
 如	Examples
 全大此五。	5 is the largest.
 五生二値即加値二値。	5 gives two points; the bonus score is two.
-全大此歪。此時三	Joker is the largest. Here, it serves as a 3.
+全大此歪。此時三	Joker is the largest; it serves as a 3.
 三生一値即三友三層此故三値。	3 gives one point. Since this is a three-of-a-kind, the bonus score is tripled, resulting in three points.
 一片歪片在即加値二値。	Since there is a single joker, the bonus score is reduced to two points.
 国官集来！	Lauzait-Cep!
-或人開三位友連而手其友連之加値即其人言「国官集来！」而再受集来値。	After revealing the third set and earning the bonus score associated with the set, the player declares “Lauzait-Cep!” (meaning “A government is formed!”) and receives the formation score.
+或人開三位友連而手其友連之加値即其人言「国官集来！」而再受集来値。	After revealing the third Department and earning the bonus score associated with it, the player declares “Lauzait-Cep!” (meaning “A government is formed!”) and receives the formation score.
 妙時開片無而三友連在手片之時同言「国官集来！」而再受集来値。	As an exception, if you have not revealed any pieces and have three valid combinations in your hand, you can declare “Lauzait-Cep!” to gain the formation score.
 此時無能手開片加値。	In such a situation, you cannot earn the bonus score that would have been obtainable by revealing the sets.
 集来値之全	The list of all the formation scores
@@ -96,23 +96,23 @@
 大連	Great Sequence
 九連値	nine consecutive numbers 
 層橋	Layered Bridges
-於手片同値之二友連在	Two sets whose numbers exactly match
+於手片同値之二友連在	Two sets whose numbers exactly match.
 無須同色。友善連善。	Does not have to be the same color. It can either be a three-of-a-kind or a sequence-of-three.
 筆兵無傾	Well-Balanced
-筆之積値加兵之積値同	The sum of the numbers on the white pieces (Administrative Officers) matches that of the green pieces (Site Workers)
-（歪片無目）	(Jokers are ignored)
+筆之積値加兵之積値同	The sum of the numbers on the white pieces (Administrative Officers) matches that of the green pieces (Site Workers).
+（歪片無目）	Jokers are ignored.
 闇戦之集	Stalemate
 無能為。	When no action can be taken.
-引人之時能斥之片此無在。反行上時而為心古行新即同為術無之時唯目此。	A situation in which there is no piece to discard during the hiring phase. It is considered a stalemate only if dissolving the department earlier was not an option to avoid this outcome.
-闇戦之集此妙時。其時無目手片友連而言「国官集来！」	Stalemate is a special situation which, regardless of the combination of pieces in your hand, you declare “Lauzait-Cep!”
+引人之時能斥之片此無在。反行上時而為心古行新即同為術無之時唯目此。	A situation in which there is no piece to discard during the hiring phase. It is considered a stalemate only if dissolving a Department earlier was not an option to avoid this outcome.
+闇戦之集此妙時。其時無目手片友連而言「国官集来！」	Stalemate is a special situation in which, regardless of the combination of pieces in your hand, you declare “Lauzait-Cep!”
 言「国官集来！」即裁値而季終。	When “Lauzait-Cep!” is declared, the scores are calculated and the Season ends.
 其季無遊術全下即始「季之上裁」始季。	When the Season is not the final one, the setup for the next Season is performed and the new Season begins.
 心古行新（全多一時）（無為此善）	Dissolving a Department (at most once) (optional)
 妙時圧眉古時与労而手加値。	Sometimes, you regret what you have done in the past to obtain the score.
-其時汝識心古行新之術。	In such cases, you can dissolve a department.
+其時汝識心古行新之術。	In such cases, you can dissolve a Department.
 為此之時手其時開之友連再閉而反与開時手之加値。	To perform this action, you reconceal the set that you have previously revealed, and refund the bonus score that you have obtained at that time.
 反与須正。	The refund must be done correctly.
-無正如此。開「二三歪」手二値而下時汝心古行新「歪二三」反与一値。	An example of an incorrect refund is when you form a department as “2-3-Joker” and obtain two points but you dissolve it as “Joker-2-3” and refund one point.
+無正如此。開「二三歪」手二値而下時汝心古行新「歪二三」反与一値。	An example of an incorrect refund is when you form a Department as “2-3-Joker” and obtain two points but you dissolve it as “Joker-2-3” and refund one point.
 悪享此使硬力須圧。	Benefit fraud must be heavily prosecuted.
 遊術終時	End of the game
 為終遊人多少之季亦全人満心之時遊終。	The game ends after the same number of rounds as there are players, or when all players are satisfied and decide to end the game.
