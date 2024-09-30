@@ -16,7 +16,7 @@
 駒（緑の「兵」と白の「筆」の2スート、計68個）	zo (2lt dec. tan-dec e elme, pulan e kuwa. auc e 68lt.)
 ワイルド	pulonleti zo (kantelit "p")
 ゲームの準備	belpic leti penen
-プレイ人数に応じて、駒を準備します。	letit lata leti kin pi panit zo leti kin.
+プレイ人数に応じて、駒を準備します。	xelit lata leti kin pi panit zo leti kin.
 4人：すべて使用。	lata e 4leti pi lucit auc.
 3人：すべての「0」を除去。	lata e 3leti pi aucetit aucleti "0"
 2人：すべての「0」と2枚の「ワイルド」を除去。	lata e 2leti pi aucetit aucleti "0" at 2leti "pulonleti zo".
@@ -73,7 +73,7 @@
 （端同士の数は繋がらない）	nucucital leti kin nip e laiju
 ボーナス点	atakecleti kin
 組合せのうち、最も大きい数の駒に対応するボーナス点を獲得します。	xelit latacela leti xep jo aucleti zo pi letit atakecleti kin.
-ボーナス点は以下の表の通りです。	xelit cukulal pi tectelit atakecleti kin.
+ボーナス点は駒に書かれている点の数です。	atakecleti kin e jo zo mol lictet leti kin.
 ワイルドを最も大きい数の代用にしている場合は、その数に対応するボーナス点を獲得します。	lucit pulonleti zo pi pulonit xep jo aucleti zo pi letit nip cilaleti kin leti atakecleti kin.
 組合せが3個セットの場合は、ボーナス点は3倍となります。	3leti mena leti atakecleti kin e cucnit 3leti.
 ワイルドカードが組合せにある場合、ボーナス点を計算したのち、1枚につき-1点します。	pulonleti zo mol jo latacela pi kinpit kin pi 1leti pulonleti zo mol pi nuwatakecit 1leti.
