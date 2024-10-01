@@ -5,6 +5,7 @@ const tsvs = [
     { file_name: 'アイル語.tsv', from: '燐文', to: 'アイル語' },
     { file_name: 'タカン語.tsv', from: '日本語', to: 'タカン語' },
     { file_name: '燐→英.tsv', from: '燐文', to: '英語' },
+    { file_name: 'lineparine.tsv', from: '日本語', to: 'lineparine' },
     { file_name: 'pemecepe.tsv', from: '日本語', to: 'pemecepe' }
 ];
 
