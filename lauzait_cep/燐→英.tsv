@@ -10,7 +10,7 @@
 裁激手片而行手大値！	Organize your hand quickly and aim for a high score!
 箱内	Content
 書（此）	This leaflet
-裁値之石	Tokens to keep track of the scores
+裁値紙銭（毎?2 1, 3, ?銭在）	Banknotes (一銭: 1pt, 三銭: 3pts, 十銭: 10pts, 12 each)
 衣	Cloth board
 五裁	Five dice-sticks
 片（二色。皇色兵片加白色筆片。全六十八片）	Pieces (Two colors. Green: Site Workers, White: Administrative Officers. 68 pieces in total)
@@ -22,17 +22,16 @@
 人二即失全「無」加二「歪」。	2 people: remove all 0s and two jokers.
 付衣於全人手軸能行之処。(p)	Place the cloth board within reach of all players. (A)
 遊人定赤青黒硫之一而労於汝色之衣端。(b)	Each player chooses one of the four colors: red, blue, black, or yellow, and sits at the corresponding edge of the board. (B)
-毎人手其色之石付於値直之「無」。(m)	Each player places a token of their color on the position 0 (無) of the score track. (C)
 季之上裁	Setup for each Season
 閉混全片。与九手片。	Mix all the pieces face down. Give nine pieces to each player.
-汝立汝之手片而別人無能目汝之手片。(c)	Be sure to make the pieces stand so that other players cannot peek at yours. (D)
+汝立汝之手片而別人無能目汝之手片。(m)	Be sure to make the pieces stand so that other players cannot peek at yours. (C)
 手残片之内二十四片付開於衣。	Take twenty-four of the remaining pieces and place them face up on the cloth board.
 於軸処之山片無。	There shall be no pieces on the central square (the Mountain).
-残片無開。(x)	The remaining pieces are kept face down. (E)
+残片無開。(c)	The remaining pieces are kept face down. (D)
 定軸人而定遊術周行。	Determine the starting player and play order.
 於此時目豊貧而貧於全人即其人此軸人。	The player with the fewest points becomes the starting player.
 目軸人右左而貧人端生遊術周行之道。 	The game proceeds clockwise or counterclockwise, depending on which of the two players next to the starting player has the fewer points.
-其人多之時其季生遊術一位之時撃裁而定軸人加周行(z)	When there are multiple players satisfying the condition, or when it is the first round, throw the dice-sticks to determine the starting player and the direction of play. (f)
+其人多之時其季生遊術一位之時撃裁而定軸人加周行(x)	When there are multiple players satisfying the condition, or when it is the first round, throw the dice-sticks to determine the starting player and the direction of play. (E)
 季行	Season
 於季遊人行々再々為日。	In each Season, players take turn and spend Days.
 於或人言「国官集来！」之時裁値而季終而新季始来。	The Season ends when a player declares “Lauzait-Cep”. Scores are calculated and the new Season starts.
@@ -74,7 +73,7 @@
 端値無連	The numbers do not wrap around.
 加値	Bonus score
 目友連全大之片而手加値。	Find the piece with the largest number on it and earn the bonus score based on that number.
-目棚絵定加値。	Look at the table below and determine the bonus score.
+加値片上星之多少。	The bonus score is the number of dots on the piece.
 使歪片於全大之片之時手無真之値之加値。	When a joker is used to represent the largest number in the set, the obtained bonus score is calculated based on the number that the joker represents.
 三友之加値三層。	A three-of-a-kind triples the bonus score.
 歪片在於友連即裁加値而歪片一片在而手下一値。	Each joker in a set decreases the bonus score by one.

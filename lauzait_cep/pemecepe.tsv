@@ -74,7 +74,7 @@
 ボーナス点	atakecleti kin
 組合せのうち、最も大きい数の駒に対応するボーナス点を獲得します。	xelit latacela leti xep jo aucleti zo pi letit atakecleti kin.
 ボーナス点は駒に書かれている点の数です。	atakecleti kin e jo zo mol lictet leti kin.
-ワイルドを最も大きい数の代用にしている場合は、その数に対応するボーナス点を獲得します。	lucit pulonleti zo pi pulonit xep jo aucleti zo pi letit nip cilaleti kin leti atakecleti kin.
+ワイルドを最も大きい数の代用にしている場合は、代用している数に対応するボーナス点を獲得します。	lucit pulonleti zo pi pulonit xep jo aucleti zo pi letit nip cilaleti kin leti atakecleti kin.
 組合せが3個セットの場合は、ボーナス点は3倍となります。	3leti mena leti atakecleti kin e cucnit 3leti.
 ワイルドカードが組合せにある場合、ボーナス点を計算したのち、1枚につき-1点します。	pulonleti zo mol jo latacela pi kinpit kin pi 1leti pulonleti zo mol pi nuwatakecit 1leti.
 ボーナス点が0点を下回ることはありません。	atakecleti kin e akxacleti kin.
