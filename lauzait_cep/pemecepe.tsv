@@ -41,6 +41,7 @@
 【0~1回】すでに公開している組合せを非公開に戻し、得点を返納する。（心古行新：温故知新）	0leti o 1leti nole - nipit kin pi tectelit kaceit leti latacela pi mak e zo e nip kaceit leti. (ticot-penul-tude-dutucun)
 【0~1回】手駒から組合せを1つ公開することで、得点を獲得する。（配属）	0leti o 1leti nole - kaceit kopzo leti 1leti latacela pi letit kin. (amolit enja)
 【1回】手駒から駒を一つ捨て、ボード上の駒を動かして駒を獲得する。（登用）	1leti nole - pac jo kopzo nipit 1leti zo pi tudeit bepale leti zo pi letit zo. (dokit lata)
+【0~1回】勝利点を得て、ラウンドを終える。（ラウツァイト・セプ！）	0leti o 1leti nole - letit molkait leti kin pi lucucit xot. (lauzait cep!)
 登用アクションを必ず行うことに注意してください。	co e lijowel jo co delu it "doktit lata" leti julo.
 登用（必ず行う）	dokit lata (delu it ka)
 手駒から駒を一つ捨て、ボード上の駒を動かして駒を獲得します。	pac jo kopzo nipit 1leti zo pi tudeit bepale leti zo pi letit zo.
@@ -64,7 +65,7 @@
 また逆に、ボード上のワイルドは、どんな種類の駒を捨てても動かすことができます。	jo nijacicen, bepale leti pulanleti zo e co xenkanit cepat pi cene tudeit leti.
 配属（最大1回、行わなくてもよい）	amolit enja (jo xep 1leti nole, co cene nip it ka)
 手駒に３個の駒からなる特定の組合せがある場合、このアクションを行うことができます。	jo kopzo 3leti zo leti latacela mol pi cene it kaleti enja.
-その組合せを公開し、ボーナス点を得ます。	kaceit kaleti latacela pi letit atakecleti kin.
+その組合せを1つ公開し、ボーナス点を得ます。	kaceit kaleti 1leti latacela pi xope letit atakecleti kin.
 公開した駒は手駒の一部として振舞いますが、温故知新アクションで非公開に戻さない限り捨てることができなくなります。	kaceit leti zo mobit kopzo pi nip it tptd pi cene nip nipit ka.
 3個セット	3leti mena
 同じ色、同じ数字3つ	nuwaxecleti dec at nuwaxecleti kin leti 3leti zo
@@ -85,9 +86,9 @@
 3は1点を生み、3個セットは3倍であるので3点。	3leti lauzait 1leti kin pi atakecleti kin e 3leti cucnit leti 3leti kin.三生一値即三友三層此故三値。
 ワイルドが1枚あるので、ボーナス点は2点。	1leti pulonleti zo mol pi atakecleti kin e 2leti kin.
 ラウツァイト・セプ！	lauzait cep!
-あるプレイヤーが3つ目の組合せを公開し、その組合せのボーナス点を得た場合、そのプレイヤーは「ラウツァイト・セプ！」と宣言して追加で勝利点を得ることになります。	1leti lata kaceit 3leti etecel leti latacela pi letit cileti latacela leti kin pi ci delu e lukupit "lauzait cep!" pi letit atakecleti molkait leti kin.
+3つの組合せをすでに公開している場合、そのプレイヤーは「ラウツァイト・セプ！」と宣言して追加で勝利点を得ることができます。	jo panleti nole lata kaceit 3leti latacela pi kaleti lata delu e lukupit "lauzait cep!" pi letit atakecleti molkait leti kin.
 あるいは特例として、手駒を一切公開していない状態で手駒の中に3つの組合せが成立している場合にも、「ラウツァイト・セプ！」と宣言して勝利点を得ることができます。	jo xon nole kaceit leti zo molip pi 3leti latacela mol jo kopzo pi co cene lukupit "lauzait cep!" pi letit molkait leti kin.
-この場合は公開によるボーナス点を得ることはできません。	jo kaleti nole nip cene kaceit zo leti atakecleti kin.
+この際はボーナス点を得ず、勝利点のみを得ます。。	jo kaleti nole nip cene letit kaceit zo leti atakecleti kin pi letit molkait leti kin.
 勝利点一覧	molkait leti kin leti auc
 ラウツァイト・セプ	lauzait cep!
 専門家委員会	lapimeti cet
@@ -109,7 +110,7 @@
 温故知新（最大1回、行わなくてもよい）	ticot-penul-tude-dutucun (jo xep 1leti nole, co cene nip it ka)
 まれに、過去に配属アクションを行いボーナス点を得たことを後悔することがあります。	co jo laip leti nole amolit enja pi letit atakecleti kin. jo xon nole co ducit co untik jo ka.
 そういった場合には、温故知新アクションを行うことができます。	jo kaleti nole co cene it tptd.
-これを行う際、すでに公開した組合せを非公開に戻し、公開時に得たボーナス点を返納することになります。	jo it ka leti nole nipit kin pi tectelit kaceit leti latacela pi mak e zo e nip kaceit leti pi nipit kin.
+これを行う際、すでに公開した組合せ1つを非公開に戻し、公開時に得たボーナス点を返納することになります。	jo it ka leti nole nipit kin pi tectelit 1leti kaceit leti latacela pi mak e zo e nip kaceit leti pi nipit kin.
 返納は正しく行う必要があります。	nipit kin delu e pankaleti cila.
 例えば、[2][3][ワイルド]を公開して2点を得たのちに、[ワイルド][2][3]を1点の返納で温故知新してはいけません。	nupankaleti cul e ka. kaceit "12p" pi letit 2leti kin. jo launza co it tptd jo "p12" pi nipit 1leti.
 不正受給は厳しく罰せられるべきなのです。	nupankaleti ice delu e lucit xep kapa pi jacamalit leti cul.
