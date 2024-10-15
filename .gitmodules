@@ -1,0 +1,4 @@
+
+[submodule "linzklar-mincho"] 
+  path = linzklar-mincho
+  url = https://github.com/sozysozbot/linzklar-mincho.git
