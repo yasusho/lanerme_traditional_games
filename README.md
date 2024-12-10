@@ -12,6 +12,7 @@
 [日本の遊戯 第一号](./ゲムマ2024春/日本の遊戯/日本の遊戯1/honbun.pdf)
 [下書き用 Google Docs](https://docs.google.com/document/d/1kuVKX8Hb13o2nLRk9wtARFzvvMThSG2NG-9mJravPX0/edit)
 [日本の遊戯 第二号](./ゲムマ2024春/日本の遊戯/日本の遊戯2/honbun.pdf)
+[下書き用 Google Docs](https://docs.google.com/document/d/1BaJK0Z0nhzjqlFeBcNPn5XwPC16AnegIIQ8okwk0o3g/edit)
 
 ## ゲームマーケット2024秋「lauzait cep」
 [PDF](./lauzait_cep/説明書.pdf)
