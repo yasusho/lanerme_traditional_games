@@ -65,7 +65,8 @@
         for (const rule of rules) {
           const regex = new RegExp(`^${rule.regex}$`);
           if (original.match(regex)) {
-            const pmcp = original.replace(regex, rule.pmcp);
+            const pmcp = original.replace(regex, rule.pmcp)
+              .replaceAll("lataleti", "lata leti");
             const jp = original
               .replace(regex, rule.jp)
               .replaceAll("mi", "「手番のプレイヤー」")
