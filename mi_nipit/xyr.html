@@ -20,6 +20,9 @@
       #cards > span {
         font-family: "xedixel";
       }
+      .xedixel {
+        font-family: "xedixel";
+      }
       #cardbuttons > input {
         font-family: "xedixel";
         line-height: 1.6em;
@@ -131,7 +134,7 @@
           causepmcp += causative[1];
         }
 
-        if (cause) {
+        if (cause && pmcp) {
           switch (cause) {
             case "mie": jp += "（nip権は手番のプレイヤー）"; break;
             case "co>e": jp += "（nip権は手番のプレイヤーから見て右の人）"; break;
@@ -182,6 +185,10 @@
   </head>
   <body>
     <h1>mi nipit! 文ルール判定機</h1>
+    <p>
+      カードを並べて有効な文ができると、ルールを表示します。
+      ただし<span class="xedixel">pi</span>は文を並べるだけの役割なので本サイトでは非対応です。
+    <p>
     <input id="advanced" type="checkbox" onclick="update()"><label for="advanced">拡張ルールを有効にする</label>
     <div id="cardbuttons">
       <input type="button" class="pers" value="mi" onclick="addCard('mi', 'pers')">
