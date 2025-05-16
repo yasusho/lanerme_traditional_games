@@ -1,6 +1,6 @@
 [
   {
-    "regex": "(mi|co>|<co|lata)letitlet(:?i|e)enip",
+    "regex": "(mi|co>|<co|lata)letitlet(?:i|e)enip",
     "pmcp": "$1 letit leti e nip",
     "jp": "$1がカードを全て捨てる"
   },
