@@ -35,12 +35,12 @@
     "jp": "次の手番を$1にする"
   },
   {
-    "regex": "(mi|co>|<co|lata)let(?:i|e)t",
+    "regex": "(mi|co>|<co|lata)letit",
     "pmcp": "$1 letit",
     "jp": "$1がカードを1枚取る"
   },
   {
-    "regex": "(mi|co>|<co|lata)let(?:i|e)t(mi|co>|<co|lata)let(?:i|e)",
+    "regex": "(mi|co>|<co|lata)letit(mi|co>|<co|lata)let(?:i|e)",
     "pmcp": "$1 letit $2leti",
     "jp": "$1が選んで$2のカードを1枚取る"
   },
