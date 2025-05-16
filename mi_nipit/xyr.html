@@ -2,7 +2,25 @@
 <html lang="ja">
   <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width">
     <title>mi nipit! 文ルール判定機</title>
+    <style>
+      #cards {
+        min-height: 1.6em;
+      }
+      .pers {
+        background-color: #e4ab4e;
+        color: #005242;
+      }
+      .pred {
+        background-color: #005242;
+        color: #f4eed7;
+      }
+      .spec {
+        background-color: #da5a36;
+        color: #f4eed7;
+      }
+    </style>
     <script>
       async function loadJson(url) {
         try {
@@ -65,11 +83,12 @@
         document.getElementById("jp").innerText = jp;
       }
 
-      function addCard(card) {
+      function addCard(card, cl) {
         const cards = document.getElementById("cards");
 
         const cardBody = document.createElement("span");
         cardBody.innerText = card;
+        cardBody.className = cl;
 
         const removeButton = document.createElement("input");
         removeButton.type="button";
@@ -84,26 +103,34 @@
 
         update();
       }
+
+      function reset() {
+        document.getElementById("cards").innerHTML = "";
+        update();
+      }
     </script>
   </head>
   <body>
     <h1>mi nipit! 文ルール判定機</h1>
+    <input id="advanced" type="checkbox" onclick="update()"><label for="advanced">拡張ルールを有効にする</label>
+    <div id="cardbuttons">
+      <input type="button" class="pers" value="mi" onclick="addCard('mi', 'pers')">
+      <input type="button" class="pers" value="co>" onclick="addCard('co>', 'pers')">
+      <input type="button" class="pers" value="<co" onclick="addCard('<co', 'pers')">
+      <input type="button" class="pers" value="lata" onclick="addCard('lata', 'pers')">
+      <input type="button" class="pred" value="let" onclick="addCard('let', 'pred')">
+      <input type="button" class="pred" value="nip" onclick="addCard('nip', 'pred')">
+      <input type="button" class="pred" value="it" onclick="addCard('it', 'pred')">
+      <input type="button" class="pred" value="e" onclick="addCard('e', 'pred')">
+      <input type="button" class="spec" value="leti" onclick="addCard('leti', 'spec')">
+    </div>
+    <div>
+      <input type="button" value="リセット" onclick="reset();">
+    </div>
     <div id="cards"></div>
     <div>
       <p>東島通商語： <span id="pmcp"></span></p>
       <p>ルール： <span id="jp"></span></p>
-    </div>
-    <input id="advanced" type="checkbox" onclick="update()"><label for="advanced">拡張ルールを有効にする</label>
-    <div id="cardbuttons">
-      <input type="button" value="mi" onclick="addCard('mi')">
-      <input type="button" value="co>" onclick="addCard('co>')">
-      <input type="button" value="<co" onclick="addCard('<co')">
-      <input type="button" value="lata" onclick="addCard('lata')">
-      <input type="button" value="let" onclick="addCard('let')">
-      <input type="button" value="nip" onclick="addCard('nip')">
-      <input type="button" value="it" onclick="addCard('it')">
-      <input type="button" value="e" onclick="addCard('e')">
-      <input type="button" value="leti" onclick="addCard('leti')">
     </div>
   </body>
 </html>
