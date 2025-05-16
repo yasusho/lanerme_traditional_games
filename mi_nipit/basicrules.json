@@ -1,0 +1,8 @@
+[
+  {
+    "regex": "(mi|co>|<co|lata)e(mi|co>|<co|lata)",
+    "pmcp": "$1 e $2",
+    "jp": "$1の手札枚数を$2の手札枚数に一致させる"
+  },
+  null
+]
