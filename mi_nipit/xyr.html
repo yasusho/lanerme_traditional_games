@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <title>mi nipit! 文判定機</title>
+    <script>
+      async function loadJson(url) {
+        try {
+          const response = await fetch(url);
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          const data = await response.json();
+          return data;
+        } catch (error) {
+          console.error("JSONの読み込み中にエラーが発生しました:", error);
+          return null;
+        }
+      }
+
+      // スペース抜きの東島通商語を入れて、スペース入り東島通商語と日本語ルールを返す
+      function judge(original, rules) {
+        for (const rule of rules) {
+          const regex = new RegExp(`^${rule.regex}$`);
+          if (original.match(regex)) {
+            const pmcp = original.replace(regex, rule.pmcp);
+            const jp = original
+              .replace(regex, rule.jp)
+              .replaceAll("mi", "「手番のプレイヤー」")
+              .replaceAll("co>", "「手番のプレイヤーから見て右の人」")
+              .replaceAll("<co", "「手番のプレイヤーから見て左の人」")
+              .replaceAll("lata", "「任意のプレイヤー一人」");
+            return {pmcp, jp};
+          }
+        }
+        return null;
+      }
+
+      async function update() {
+        const cards = document.getElementById("cards");
+        const original = [...cards.children].map(card=>card.innerText).join("");
+
+        let pmcp = "";
+        let jp = "";
+
+        const basicRules = (await loadJson("./basicrules.json")).filter(x=>x);
+        const basicJudge = judge(original, basicRules);
+        if (basicJudge) {
+          pmcp = basicJudge.pmcp;
+          jp = basicJudge.jp;
+        }
+
+        if (document.getElementById("advanced").checked) {
+          const advancedRules = (await loadJson("./advancedrules.json")).filter(x=>x);
+          const advancedJudge = judge(original, advancedRules);
+          if (advancedJudge) {
+            pmcp = advancedJudge.pmcp;
+            jp = advancedJudge.jp;
+          }
+        }
+
+        document.getElementById("pmcp").innerText = pmcp;
+        document.getElementById("jp").innerText = jp;
+      }
+
+      function addCard(card) {
+        const cards = document.getElementById("cards");
+
+        const cardBody = document.createElement("span");
+        cardBody.innerText = card;
+
+        const removeButton = document.createElement("input");
+        removeButton.type="button";
+        removeButton.value="×";
+        removeButton.addEventListener("click", e => {
+          cards.removeChild(cardBody);
+          update();
+        });
+        cardBody.appendChild(removeButton);
+
+        cards.appendChild(cardBody);
+
+        update();
+      }
+    </script>
+  </head>
+  <body>
+    <div id="cards"></div>
+    <div>
+      <p>東島通商語： <span id="pmcp"></span></p>
+      <p>ルール： <span id="jp"></span></p>
+    </div>
+    <input id="advanced" type="checkbox" onclick="update()"><label for="advanced">拡張ルールを有効にする</label>
+    <div id="cardbuttons">
+      <input type="button" value="mi" onclick="addCard('mi')">
+      <input type="button" value="co>" onclick="addCard('co>')">
+      <input type="button" value="<co" onclick="addCard('<co')">
+      <input type="button" value="lata" onclick="addCard('lata')">
+      <input type="button" value="let" onclick="addCard('let')">
+      <input type="button" value="nip" onclick="addCard('nip')">
+      <input type="button" value="it" onclick="addCard('it')">
+      <input type="button" value="e" onclick="addCard('e')">
+      <input type="button" value="leti" onclick="addCard('leti')">
+    </div>
+  </body>
+</html>
