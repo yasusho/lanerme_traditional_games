@@ -1,0 +1,63 @@
+[
+  {
+    "regex": "(mi|co>|<co|lata)e(mi|co>|<co|lata)",
+    "pmcp": "$1 e $2",
+    "jp": "$1の手札枚数を$2の手札枚数に一致させる"
+  },
+  {
+    "regex": "(mi|co>|<co|lata)let(?:i|e)e(mi|co>|<co|lata)let(?:i|e)",
+    "pmcp": "$1leti e $2leti",
+    "jp": "$1のカードを1枚$2に渡す"
+  },
+  {
+    "regex": "(co>|<co|lata)emilet(?:i|e)",
+    "pmcp": "$1 e mileti",
+    "jp": "$1に愛の告白をする"
+  },
+  {
+    "regex": "mie(co>|<co|lata)let(?:i|e)",
+    "pmcp": "mi e $1leti",
+    "jp": "$1に愛の告白をする"
+  },
+  {
+    "regex": "(mi|co>|<co|lata)enip",
+    "pmcp": "$1 e nip",
+    "jp": "$1の次の手番を1回飛ばす（累積する）"
+  },
+  {
+    "regex": "(mi|co>|<co|lata)let(?:i|e)enip",
+    "pmcp": "$1leti e nip",
+    "jp": "$1がカードを1枚捨てる"
+  },
+  {
+    "regex": "(mi|co>|<co|lata)it",
+    "pmcp": "$1 it",
+    "jp": "次の手番を$1にする"
+  },
+  {
+    "regex": "(mi|co>|<co|lata)letit",
+    "pmcp": "$1 letit",
+    "jp": "$1がカードを1枚取る"
+  },
+  {
+    "regex": "(mi|co>|<co|lata)letit(mi|co>|<co|lata)let(?:i|e)",
+    "pmcp": "$1 letit $2leti",
+    "jp": "$1が選んで$2のカードを1枚取る"
+  },
+  {
+    "regex": "(mi|co>|<co|lata)nipit",
+    "pmcp": "$1 nipit",
+    "jp": "$1がカードを1枚捨てる"
+  },
+  {
+    "regex": "(mi|lata)nipit(mi|co>|<co|lata)",
+    "pmcp": "$1 nipit $2",
+    "jp": "$2の次の手番を1回飛ばす（累積する）"
+  },
+  {
+    "regex": "(mi|co>|<co|lata)nipit(mi|co>|<co|lata)let(?:i|e)",
+    "pmcp": "$1 nipit $2leti",
+    "jp": "$1が選んで$2のカードを1枚捨てる"
+  },
+  null
+]

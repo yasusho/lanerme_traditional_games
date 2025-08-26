@@ -1,0 +1,68 @@
+[
+  {
+    "regex": "(mi|co>|<co|lata)let(?:i|e)e(mi|co>|<co|lata)letitlet(?:i|e)",
+    "pmcp": "$1 leti e $2 letit leti",
+    "jp": "$1のカードを1枚$2に渡す"
+  },
+  {
+    "regex": "(mi|co>|<co|lata)letitlet(?:i|e)e(mi|co>|<co|lata)letitlet(?:i|e)",
+    "pmcp": "$1 letit leti e $2 letit leti",
+    "jp": "$1のカードを全部$2に渡す"
+  },
+  {
+    "regex": "(mi|co>|<co|lata)letitlet(?:i|e)e(mi|co>|<co|lata)let(?:i|e)",
+    "pmcp": "$1 letit leti e $2 leti",
+    "jp": "$1のカードを全部$2に渡す"
+  },
+  {
+    "regex": "(mi|co>|<co|lata)letitlet(?:i|e)e(mi|co>|<co|lata)nipitlet(?:i|e)",
+    "pmcp": "$1 letit leti e $2 nipit leti",
+    "jp": "$1の持っているカードを1枚$2が選んで捨てる"
+  },
+  {
+    "regex": "(mi|co>|<co|lata)nipitlet(?:i|e)e(mi|co>|<co|lata)letitlet(?:i|e)",
+    "pmcp": "$1 nipit leti e $2 letit leti",
+    "jp": "$1のカードを1枚$2に渡す"
+  },
+  {
+    "regex": "(mi|co>|<co|lata)nipitlet(?:i|e)e(mi|co>|<co|lata)let(?:i|e)",
+    "pmcp": "$1 nipit leti e $2 leti",
+    "jp": "$1のカードを1枚$2に渡す"
+  },
+  {
+    "regex": "(mi|co>|<co|lata)nipitlet(?:i|e)e(mi|co>|<co|lata)nipitlet(?:i|e)",
+    "pmcp": "$1 nipit leti e $2 nipit leti",
+    "jp": "$1が選んで1枚捨てたカードを持っていれば$2も1枚捨てる"
+  },
+  {
+    "regex": "(mi|co>|<co|lata)letitlet(?:i|e)enip",
+    "pmcp": "$1 letit leti e nip",
+    "jp": "$1がカードを全て捨てる"
+  },
+  {
+    "regex": "(mi|co>|<co|lata)nipitlet(?:i|e)enip",
+    "pmcp": "$1 nipit leti e nip",
+    "jp": "$1がカードを1枚捨てる"
+  },
+  {
+    "regex": "(mi|co>|<co|lata)letit(mi|co>|co<|lata)letitlet(?:i|e)",
+    "pmcp": "$1 letit $2 letit leti",
+    "jp": "$1が$2のカードを全て取る"
+  },
+  {
+    "regex": "(mi|co>|<co|lata)letit(mi|co>|co<|lata)nipitlet(?:i|e)",
+    "pmcp": "$1 letit $2 nipit leti",
+    "jp": "$1が$2の選んだP2のカードを1枚取る"
+  },
+  {
+    "regex": "(mi|co>|<co|lata)nipit(mi|co>|co<|lata)letitlet(?:i|e)",
+    "pmcp": "$1 nipit $2 letit leti",
+    "jp": "$2がカードを全て捨てる"
+  },
+  {
+    "regex": "(mi|co>|<co|lata)nipit(mi|co>|co<|lata)nipitlet(?:i|e)",
+    "pmcp": "$1 nipit $2 nipit leti",
+    "jp": "$2がカードを1枚捨てる"
+  },
+  null
+]

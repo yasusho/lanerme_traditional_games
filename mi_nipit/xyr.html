@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width">
+    <title>mi nipit! 文ルール判定機</title>
+    <style>
+      @font-face {
+        font-family: "xedixel";
+        src: url("https://raw.githubusercontent.com/yasusho/qafopwa_pmcp_font/main/xedixel/xedixel.woff") format('woff');
+      }
+
+      body {
+        background-color: #f4eed7;
+      }
+      #cards {
+        min-height: 1.6em;
+        margin: 3px;
+      }
+      #cards > span {
+        font-family: "xedixel";
+      }
+      .xedixel {
+        font-family: "xedixel";
+      }
+      #cardbuttons > input {
+        font-family: "xedixel";
+        line-height: 1.6em;
+      }
+      #pmcp {
+        font-family: "xedixel";
+      }
+      .pers {
+        background-color: #e4ab4e;
+        color: #005242;
+      }
+      .pred {
+        background-color: #005242;
+        color: #f4eed7;
+      }
+      .spec {
+        background-color: #da5a36;
+        color: #f4eed7;
+      }
+      .remove {
+        margin: 0 0 0 3px;
+      }
+    </style>
+    <script>
+      async function loadJson(url) {
+        try {
+          const response = await fetch(url);
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          const data = await response.json();
+          return data;
+        } catch (error) {
+          console.error("JSONの読み込み中にエラーが発生しました:", error);
+          return null;
+        }
+      }
+
+      // スペース抜きの東島通商語を入れて、スペース入り東島通商語とカナとルールを返す
+      function judge(original, rules) {
+        for (const rule of rules) {
+          const regex = new RegExp(`^${rule.regex}$`);
+          if (original.match(regex)) {
+            const pmcp = original.replace(regex, rule.pmcp)
+              .replaceAll("lataleti", "lata leti");
+            const jp = original
+              .replace(regex, rule.jp)
+              .replaceAll("mi", "「手番のプレイヤー」")
+              .replaceAll("co>", "「手番のプレイヤーから見て右の人」")
+              .replaceAll("<co", "「手番のプレイヤーから見て左の人」")
+              .replaceAll("lata", "「任意のプレイヤー一人」");
+            const kana = pmcp
+              .replaceAll(" ", "・")
+              .replaceAll("mi", "ミ")
+              .replaceAll("co>", "ソ")
+              .replaceAll("<co", "ソ")
+              .replaceAll("lata", "ラタ")
+              .replaceAll("letit", "レティㇳ")
+              .replaceAll("nipit", "ニピㇳ")
+              .replaceAll("leti", "レティ")
+              .replaceAll("nip", "ニㇷ゚")
+              .replaceAll("it", "イㇳ")
+              .replaceAll("e", "エ");
+            return {pmcp, jp, kana};
+          }
+        }
+        return null;
+      }
+
+      async function update() {
+        const cards = document.getElementById("cards");
+        let original = [...cards.children].map(card=>card.innerText).join("");
+
+        let pmcp = "";
+        let jp = "";
+        let kana = "";
+        let cause = "";
+        let causepmcp = "";
+
+        while (true) {
+          const basicRules = (await loadJson("./basicrules.json")).filter(x=>x);
+          const basicJudge = judge(original, basicRules);
+          if (basicJudge) {
+            pmcp = basicJudge.pmcp;
+            jp = basicJudge.jp;
+            kana = basicJudge.kana;
+            break;
+          }
+
+          if (document.getElementById("advanced").checked) {
+            const advancedRules = (await loadJson("./advancedrules.json")).filter(x=>x);
+            const advancedJudge = judge(original, advancedRules);
+            if (advancedJudge) {
+              pmcp = advancedJudge.pmcp;
+              jp = advancedJudge.jp;
+              kana = advancedJudge.kana;
+              break;
+            }
+          } else {
+            break;
+          }
+
+          const causative = original.match(/(^mie|^co>e|^<coe|^latae)(.*)$/);
+          if (!causative) { break; }
+          original = causative[2];
+          if (!cause) { cause = causative[1]; }
+          causepmcp += causative[1];
+        }
+
+        if (cause && pmcp) {
+          switch (cause) {
+            case "mie": jp += "（nip権は手番のプレイヤー）"; break;
+            case "co>e": jp += "（nip権は手番のプレイヤーから見て右の人）"; break;
+            case "<coe": jp += "（nip権は手番のプレイヤーから見て左の人）"; break;
+            case "latae": jp += "（nip権は任意のプレイヤー一人）"; break;
+          }
+          pmcp = causepmcp.replaceAll("e", " e ") + pmcp;
+          kana = causepmcp
+            .replaceAll("mie", "ミ・エ・")
+            .replaceAll("co>e", "ソ・エ・")
+            .replaceAll("<coe", "ソ・エ・")
+            .replaceAll("latae", "ラタ・エ・")
+            + kana;
+        }
+
+        document.getElementById("pmcp").innerText = pmcp;
+        document.getElementById("jp").innerText = jp;
+        document.getElementById("kana").innerText = kana;
+      }
+
+      function addCard(card, cl) {
+        const cards = document.getElementById("cards");
+
+        const cardBody = document.createElement("span");
+        cardBody.innerText = card;
+        cardBody.className = cl;
+
+        const removeButton = document.createElement("input");
+        removeButton.type="button";
+        removeButton.value="×";
+        removeButton.className="remove";
+        removeButton.addEventListener("click", e => {
+          cards.removeChild(cardBody);
+          update();
+        });
+        cardBody.appendChild(removeButton);
+
+        cards.appendChild(cardBody);
+
+        update();
+      }
+
+      function reset() {
+        document.getElementById("cards").innerHTML = "";
+        update();
+      }
+    </script>
+  </head>
+  <body>
+    <h1>mi nipit! 文ルール判定機</h1>
+    <p>
+      カードを並べて有効な文ができると、ルールを表示します。
+      ただし<span class="xedixel">pi</span>は文を並べるだけの役割なので本サイトでは非対応です。
+    <p>
+    <input id="advanced" type="checkbox" onclick="update()"><label for="advanced">拡張ルールを有効にする</label>
+    <div id="cardbuttons">
+      <input type="button" class="pers" value="mi" onclick="addCard('mi', 'pers')">
+      <input type="button" class="pers" value="co>" onclick="addCard('co>', 'pers')">
+      <input type="button" class="pers" value="<co" onclick="addCard('<co', 'pers')">
+      <input type="button" class="pers" value="lata" onclick="addCard('lata', 'pers')">
+      <input type="button" class="pred" value="let" onclick="addCard('let', 'pred')">
+      <input type="button" class="pred" value="nip" onclick="addCard('nip', 'pred')">
+      <input type="button" class="pred" value="it" onclick="addCard('it', 'pred')">
+      <input type="button" class="pred" value="e" onclick="addCard('e', 'pred')">
+      <input type="button" class="spec" value="leti" onclick="addCard('leti', 'spec')">
+    </div>
+    <div>
+      <input type="button" value="リセット" onclick="reset();">
+    </div>
+    <div id="cards"></div>
+    <div>
+      <p>東島通商語： <span id="pmcp"></span></p>
+      <p>発音： <span id="kana"></span></p>
+      <p>ルール： <span id="jp"></span></p>
+    </div>
+  </body>
+</html>
