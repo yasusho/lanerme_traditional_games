@@ -22,3 +22,6 @@
 
 ## 投げ棒を投げてみよう！
 [Web 投げ棒](https://yasusho.github.io/lanerme_traditional_games/xyr/%E6%92%83%E8%A3%81.html)
+
+## 「ミ・ニピト！」公式サポートサイト
+[「ミ・ニピト！」公式サポートサイト](https://yasusho.github.io/lanerme_traditional_games/mi_nipit/index.html)
