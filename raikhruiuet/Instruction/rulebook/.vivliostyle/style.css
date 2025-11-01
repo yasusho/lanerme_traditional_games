@@ -1,0 +1,39 @@
+@page {
+  size: B5;
+  writing-mode: vertical-rl;
+  margin-top: 15mm;
+  margin-bottom: 15mm;
+  margin-left: 20mm;
+  margin-right: 20mm;
+}
+
+body {
+  font-family: "linzklar_rounded";
+  font-size: 10pt;
+  line-height: 2;
+  letter-spacing: 0.05em;
+  writing-mode: vertical-rl;
+}
+
+h1 {
+  font-size: 24pt;
+  line-height: 1.5;
+  border-right: 4px solid #333;
+  padding-right: 0.5em; 
+  margin-top: 0;
+}
+
+h2 {
+  font-size: 18pt;
+  line-height: 1.8;
+  border-right: 2px solid #666;
+  padding-right: 0.5em;
+}
+
+.tcy {
+  text-combine-upright: all;
+}
+
+.upright {
+  text-orientation: upright;
+}
