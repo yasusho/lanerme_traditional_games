@@ -8,6 +8,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    <!-- PeerJS for P2P communication -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         /* Temporary inline styles for immediate feedback before style.css loads/is perfected */
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; margin: 0; display: flex; height: 100vh; overflow: hidden; }
@@ -20,16 +22,46 @@
             <h2>AIL LIME Simulator Setup</h2>
             <div class="setup-section">
                 <label>プレイヤー人数:</label>
+                <div id="p2p-player-hint" style="display: none; font-size: 0.9em; color: #666; margin-top: 5px;">
+                    P2Pモード: 参加者の人数を選択してください
+                </div>
                 <div class="player-count-buttons">
-                    <button class="count-btn" data-count="2">2</button>
+                    <button class="count-btn active" data-count="2">2</button>
                     <button class="count-btn" data-count="3">3</button>
                     <button class="count-btn" data-count="4">4</button>
-                    <button class="count-btn active" data-count="5">5</button>
+                    <button class="count-btn" data-count="5">5</button>
                 </div>
             </div>
+            <!-- Game Mode Selection -->
+            <div class="setup-section" style="margin-top: 15px;">
+                <label>ゲームモード:</label>
+                <div class="game-mode-buttons" style="display: flex; gap: 10px; margin-top: 8px;">
+                    <button class="mode-btn active" data-mode="local">ローカル</button>
+                    <button class="mode-btn" data-mode="host">P2Pホスト</button>
+                    <button class="mode-btn" data-mode="guest">P2P参加</button>
+                </div>
+            </div>
+            
+            <!-- P2P Host Info (hidden by default) -->
+            <div id="p2p-host-section" class="setup-section" style="display: none; margin-top: 15px;">
+                <label>ルームID:</label>
+                <div id="room-id-display" style="font-family: monospace; font-size: 1.2em; padding: 10px; background: #e0e0e0; border-radius: 5px; margin-top: 5px;"></div>
+                <div id="p2p-waiting" style="margin-top: 10px; color: #666;">プレイヤーの参加を待っています...</div>
+                <div id="p2p-connected" style="display: none; margin-top: 10px; color: green;">✓ 相手が接続しました！</div>
+            </div>
+            
+            <!-- P2P Guest Input (hidden by default) -->
+            <div id="p2p-guest-section" class="setup-section" style="display: none; margin-top: 15px;">
+                <label>ホストのルームIDを入力:</label>
+                <input type="text" id="room-id-input" placeholder="AIL-XXXXXX" style="width: 100%; padding: 10px; margin-top: 5px; font-family: monospace; font-size: 1.1em; border: 1px solid #ccc; border-radius: 5px;">
+                <button id="btn-connect-p2p" class="btn-secondary" style="margin-top: 10px; width: 100%;">接続</button>
+                <div id="p2p-connection-status" style="margin-top: 10px;"></div>
+            </div>
+            
             <div class="setup-actions">
                 <button id="btn-start-normal" class="btn-primary">ゲーム開始 (自分＋AI)</button>
                 <button id="btn-start-simulation" class="btn-secondary">AI対戦シミュレーション開始</button>
+                <button id="btn-start-p2p" class="btn-primary" style="display: none;">P2P対戦開始</button>
             </div>
         </div>
     </div>
@@ -105,6 +137,7 @@
     <!-- Scripts -->
     <script src="map_data.js"></script>
     <script src="cards.js"></script>
+    <script src="network.js"></script>
     <script src="game.js"></script>
 </body>
 </html>

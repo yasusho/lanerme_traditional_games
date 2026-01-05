@@ -11,9 +11,12 @@ class Game {
         this.playerCount = 5; // デフォルトは5人
         this.turnsPlayedInRound = 0; // 安全のため初期化
         this.simulationMode = false;
-        this.turnsPlayedInRound = 0; // 安全のため初期化
-        this.simulationMode = false;
         this.simSpeed = 500; // 適度な速度（0.5秒）
+
+        // P2Pネットワークモード
+        this.networkMode = 'local'; // 'local' | 'host' | 'guest'
+        this.localPlayerId = 0; // このクライアントが操作するプレイヤーID
+        this.p2pReady = false; // P2P接続が確立されたか
 
         // UI要素
         this.setupModal = document.getElementById('setup-modal-overlay');
@@ -84,18 +87,495 @@ class Game {
                 countBtns.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 this.playerCount = parseInt(btn.dataset.count);
+
+                // P2Pホストモードなら接続待ち表示を更新
+                if (this.networkMode === 'host') {
+                    const connCount = networkManager.getConnectionCount();
+                    const needed = this.playerCount - 1;
+                    const waitingEl = document.getElementById('p2p-waiting');
+                    if (waitingEl) {
+                        waitingEl.innerHTML = `プレイヤーの参加を待っています... (接続: ${connCount}/${needed})`;
+                    }
+                    // 必要人数に達しているかチェック
+                    const p2pBtn = document.getElementById('btn-start-p2p');
+                    const connectedEl = document.getElementById('p2p-connected');
+                    if (connCount >= needed) {
+                        waitingEl.style.display = 'none';
+                        connectedEl.style.display = 'block';
+                        connectedEl.textContent = `✓ ${connCount}人が接続しました！`;
+                        p2pBtn.style.display = 'inline-block';
+                        this.p2pReady = true;
+                    } else {
+                        waitingEl.style.display = 'block';
+                        connectedEl.style.display = 'none';
+                        p2pBtn.style.display = 'none';
+                        this.p2pReady = false;
+                    }
+                }
             });
         });
 
+        // P2Pモード選択ボタン
+        const modeBtns = document.querySelectorAll('.mode-btn');
+        const hostSection = document.getElementById('p2p-host-section');
+        const guestSection = document.getElementById('p2p-guest-section');
+        const normalBtn = document.getElementById('btn-start-normal');
+        const simBtn = document.getElementById('btn-start-simulation');
+        const p2pBtn = document.getElementById('btn-start-p2p');
+        const countSection = document.querySelector('.player-count-buttons');
+
+        modeBtns.forEach(btn => {
+            btn.addEventListener('click', async () => {
+                modeBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                const mode = btn.dataset.mode;
+                this.networkMode = mode;
+
+                // UIを切り替え
+                hostSection.style.display = 'none';
+                guestSection.style.display = 'none';
+                normalBtn.style.display = 'none';
+                simBtn.style.display = 'none';
+                p2pBtn.style.display = 'none';
+                const p2pHintReset = document.getElementById('p2p-player-hint');
+                if (p2pHintReset) p2pHintReset.style.display = 'none';
+                if (countSection && countSection.parentElement) {
+                    countSection.parentElement.style.display = 'block';
+                }
+
+                if (mode === 'local') {
+                    normalBtn.style.display = 'inline-block';
+                    simBtn.style.display = 'inline-block';
+                } else if (mode === 'host') {
+                    // P2Pモードでもプレイヤー数選択を有効に
+                    // (デフォルトは2人)
+                    if (!this.playerCount || this.playerCount < 2) {
+                        this.playerCount = 2;
+                    }
+                    // プレイヤー数選択を表示し、ヒントも表示
+                    if (countSection && countSection.parentElement) {
+                        countSection.parentElement.style.display = 'block';
+                    }
+                    const p2pHint = document.getElementById('p2p-player-hint');
+                    if (p2pHint) p2pHint.style.display = 'block';
+
+                    hostSection.style.display = 'block';
+
+                    // ホストとして初期化
+                    try {
+                        const roomId = await networkManager.initAsHost();
+                        document.getElementById('room-id-display').textContent = roomId;
+                        document.getElementById('p2p-waiting').innerHTML = 'プレイヤーの参加を待っています... (接続: 0/' + (this.playerCount - 1) + ')';
+                        document.getElementById('p2p-waiting').style.display = 'block';
+                        document.getElementById('p2p-connected').style.display = 'none';
+
+                        // 接続時のコールバック
+                        networkManager.onConnection((peerId, playerId) => {
+                            const connCount = networkManager.getConnectionCount();
+                            const needed = this.playerCount - 1;
+                            document.getElementById('p2p-waiting').innerHTML = `プレイヤーの参加を待っています... (接続: ${connCount}/${needed})`;
+
+                            // ゲストにプレイヤーIDを通知
+                            networkManager.send(peerId, {
+                                type: 'PLAYER_ID_ASSIGN',
+                                playerId: playerId,
+                                totalPlayers: this.playerCount
+                            });
+
+                            if (connCount >= needed) {
+                                document.getElementById('p2p-waiting').style.display = 'none';
+                                document.getElementById('p2p-connected').style.display = 'block';
+                                document.getElementById('p2p-connected').textContent = `✓ ${connCount}人が接続しました！`;
+                                p2pBtn.style.display = 'inline-block';
+                                this.p2pReady = true;
+                            }
+                        });
+
+                        // メッセージ受信コールバックを設定
+                        this.setupNetworkCallbacks();
+                    } catch (err) {
+                        console.error('Failed to init as host:', err);
+                        alert('ホストの初期化に失敗しました: ' + err.message);
+                    }
+                } else if (mode === 'guest') {
+                    // ゲストはプレイヤー数選択不要
+                    if (countSection && countSection.parentElement) {
+                        countSection.parentElement.style.display = 'none';
+                    }
+                    guestSection.style.display = 'block';
+                }
+            });
+        });
+
+        // ゲスト接続ボタン
+        document.getElementById('btn-connect-p2p').addEventListener('click', async () => {
+            const roomId = document.getElementById('room-id-input').value.trim();
+            const statusDiv = document.getElementById('p2p-connection-status');
+
+            if (!roomId) {
+                statusDiv.textContent = 'ルームIDを入力してください';
+                statusDiv.style.color = 'red';
+                return;
+            }
+
+            statusDiv.textContent = '接続中...';
+            statusDiv.style.color = '#666';
+
+            try {
+                await networkManager.initAsGuest(roomId);
+                statusDiv.textContent = '✓ 接続成功！ホストがゲームを開始するのを待っています...';
+                statusDiv.style.color = 'green';
+                this.p2pReady = true;
+                this.localPlayerId = 1; // ゲストはプレイヤー1
+
+                // メッセージ受信コールバックを設定
+                this.setupNetworkCallbacks();
+            } catch (err) {
+                console.error('Failed to connect:', err);
+                statusDiv.textContent = '接続失敗: ' + err.message;
+                statusDiv.style.color = 'red';
+            }
+        });
+
+        // P2P対戦開始ボタン（ホストのみ）
+        document.getElementById('btn-start-p2p').addEventListener('click', () => {
+            if (this.networkMode === 'host' && this.p2pReady) {
+                this.simulationMode = false;
+                this.localPlayerId = 0; // ホストはプレイヤー0
+                this.startSetup();
+            }
+        });
+
         document.getElementById('btn-start-normal').addEventListener('click', () => {
+            this.networkMode = 'local';
             this.simulationMode = false;
             this.startSetup();
         });
 
         document.getElementById('btn-start-simulation').addEventListener('click', () => {
+            this.networkMode = 'local';
             this.simulationMode = true;
             this.startSetup();
         });
+    }
+
+    /**
+     * P2Pネットワークコールバックを設定
+     */
+    setupNetworkCallbacks() {
+        networkManager.onMessage((data, peerId) => {
+            this.handleNetworkMessage(data, peerId);
+        });
+
+        networkManager.onDisconnect((peerId) => {
+            this.log('相手との接続が切断されました', true);
+            alert('相手との接続が切断されました');
+        });
+    }
+
+    /**
+     * ネットワークメッセージを処理
+     */
+    handleNetworkMessage(data, peerId) {
+        console.log('[Game] Received network message:', data);
+
+        switch (data.type) {
+            case 'PLAYER_ID_ASSIGN':
+                // ゲスト側: ホストから割り当てられたプレイヤーIDを受信
+                if (this.networkMode === 'guest') {
+                    this.localPlayerId = data.playerId;
+                    this.playerCount = data.totalPlayers;
+                    networkManager.setLocalPlayerId(data.playerId);
+                    console.log('[Game] Assigned Player ID:', data.playerId, 'Total:', data.totalPlayers);
+                    this.log(`プレイヤー ${data.playerId + 1} としてゲームに参加します`);
+                }
+                break;
+
+            case 'GAME_START':
+                // ゲスト側: ホストからゲーム開始通知を受信
+                if (this.networkMode === 'guest') {
+                    this.applyGameState(data.gameState);
+                    this.setupModal.classList.add('hidden');
+                    this.gameContainer.style.display = 'flex';
+                }
+                break;
+
+            case 'CARD_SELECTED':
+                // 相手がカードを選択
+                if (data.playerId !== this.localPlayerId) {
+                    const player = this.players[data.playerId];
+                    if (player && player.hand[data.cardIndex]) {
+                        player.selectedCard = player.hand[data.cardIndex];
+                        this.log(`${player.name} がカードを選択しました`);
+                        this.updateUI();
+                        // 両方選択完了ならフェーズ進行
+                        if (this.phase === 'plan' && this.players.every(p => p.selectedCard)) {
+                            this.advancePhase();
+                        }
+                    }
+                }
+                break;
+
+            case 'ACTION':
+                // 相手のアクションを適用
+                if (data.playerId !== this.localPlayerId) {
+                    this.applyRemoteAction(data);
+                }
+                break;
+
+            case 'REQUEST_TURN_END':
+                // ホスト側: ゲストからのターン終了リクエスト
+                if (this.networkMode === 'host') {
+                    this.performTurnEnd(this.currentPlayerIndex);
+                }
+                break;
+
+            case 'TURN_UPDATE':
+            case 'TURN_END':
+                // ターン終了と更新情報を受信
+                this.currentPlayerIndex = data.currentPlayerIndex;
+                this.turnsPlayedInRound = data.turnsPlayedInRound;
+                this.roundTokens = data.roundTokens;
+
+                // 補充されたプレイヤーの手札更新（TURN_UPDATEの場合）
+                if (data.replenishedPlayerId !== undefined && data.newHand) {
+                    const p = this.players[data.replenishedPlayerId];
+                    if (p) {
+                        if (this.isLocalPlayer(p)) {
+                            p.hand = data.newHand;
+                            this.log(`手札を補充しました。`, true);
+                        } else {
+                            // 他人の手札は隠して更新
+                            p.hand = data.newHand.map((c, i) => ({
+                                hidden: true,
+                                instanceId: `hidden_${data.replenishedPlayerId}_${i}`
+                            }));
+                        }
+                    }
+                }
+
+                // 次のターンを開始
+                const pCount = this.players.length || this.playerCount;
+                if (this.turnsPlayedInRound >= pCount) {
+                    if (this.gameEndTriggered) {
+                        this.endGame();
+                    } else {
+                        this.startReplenishPhase();
+                    }
+                } else {
+                    this.startExecuteTurn();
+                }
+                break;
+
+            case 'SYNC':
+                // 完全な状態同期（ゲーム開始時のみ使用）
+                // 通常のゲームプレイ中は使わない
+                break;
+
+            case 'ROUND_REPLENISH':
+                // 新ラウンドの開始同期
+                this.round = data.round;
+                this.roundTokens = data.roundTokens;
+                this.startPlayerIndex = data.startPlayerIndex;
+                this.phase = data.phase;
+                this.turnsPlayedInRound = 0;
+
+                // 手札更新ロジックは削除（TURN_UPDATEで都度行われるため）
+
+                this.log("次のラウンドを開始します...");
+                this.updateUI();
+                this.renderMap();
+                if (this.nextPhaseBtn) this.nextPhaseBtn.disabled = false;
+                break;
+        }
+    }
+
+    /**
+     * リモートアクションを適用
+     */
+    applyRemoteAction(data) {
+        const player = this.players[data.playerId];
+        if (!player) return;
+
+        if (data.action === 'move') {
+            // 移動アクション
+            const card = player.selectedCard;
+            if (card) {
+                this.discardPile.push(card);
+                this.removeCardFromHand(player, card);
+                player.selectedCard = null;
+
+                // 経路と周回チェック
+                const path = this.findPath(player.location, data.data.targetNodeId, card.move || 1);
+                if (this.checkPathForLoop(path)) {
+                    player.roundTokens = (player.roundTokens || 0) + 1;
+                    this.roundTokens--;
+                    this.log(`${player.name} が周回トークンを獲得しました`);
+                }
+
+                // nodeStacksを更新
+                const passengers = this.getPassengers(player);
+                this.updateNodeStacks(player, data.data.targetNodeId, passengers);
+
+                player.location = data.data.targetNodeId;
+                this.log(`${player.name} がノード ${data.data.targetNodeId} に移動しました`);
+
+                this.renderMap();
+                this.updateUI();
+                // endTurnは相手側のTURN_ENDメッセージで処理するため呼ばない
+            }
+        } else if (data.action === 'build') {
+            // 建設アクション
+            let card = player.selectedCard;
+            // P2P: 正確なカード特定
+            if (data.cardInstanceId) {
+                card = player.hand.find(c => c.instanceId === data.cardInstanceId);
+            }
+
+            // カードが見つからない場合（リモートプレイヤーの手札が隠されている場合など）
+            if (!card && data.cardId) {
+                // マスターデータからカード情報を復元
+                const cardData = cardsData.find(c => c.id === data.cardId);
+                if (cardData) {
+                    card = { ...cardData, instanceId: data.cardInstanceId };
+
+                    // 手札から裏向きカードを優先して1枚減らす（同期）
+                    const hiddenIdx = player.hand.findIndex(c => c.hidden);
+                    if (hiddenIdx > -1) {
+                        player.hand.splice(hiddenIdx, 1);
+                    } else {
+                        player.hand.pop();
+                    }
+                    // ここでUI更新を入れると、finalizeBuild内のremoveCardFromHandと重複するが、
+                    // finalizeBuildは card オブジェクトを手札から消そうとする。
+                    // しかし card は手札に実在しないオブジェクトなので、finalizeBuild内のremoveは失敗する。
+                    // したがってここで手動削除しておくのが正解。
+                    this.updateUI();
+                }
+            }
+
+            if (card) {
+                // リソース同期 (完全同期)
+                if (data.resources) {
+                    player.resources = { ...data.resources };
+                } else if (data.data && data.data.costPaid) {
+                    // 旧形式の後方互換
+                    Object.entries(data.data.costPaid).forEach(([res, amount]) => {
+                        player.resources[res] = (player.resources[res] || 0) - amount;
+                    });
+                }
+
+                // finalizeBuildを再利用して一貫性を保つ
+                this.finalizeBuild(player, card, data.chainRemaining);
+
+                this.updateUI();
+                // endTurnは呼ばない（TURN_ENDメッセージを待つ）
+            }
+        } else if (data.action === 'convert') {
+            // 変換アクション (P2P対応)
+            if (data.resources) {
+                player.resources = { ...data.resources };
+            }
+            const card = data.cardInstanceId ? player.construction.find(c => c.instanceId === data.cardInstanceId) : null;
+            if (card) card.usedThisTurn = true;
+            this.playSFX('convert');
+            this.log(`${player.name} が変換アクションを実行しました`);
+            this.updateUI();
+        }
+    }
+
+    /**
+     * ゲーム状態を適用（ゲスト側で使用）
+     */
+    applyGameState(state) {
+        // ゲスト側の初期化フラグを設定
+        this.initialized = true;
+        this.playerCount = state.playerCount;
+
+        // nodeStacksを初期化
+        this.nodeStacks = {};
+        if (typeof mapNodes !== 'undefined') {
+            mapNodes.forEach(node => {
+                this.nodeStacks[node.id] = [];
+            });
+        }
+
+        // プレイヤー情報を復元（相手の手札は裏向きで表示するためダミーカードに置換）
+        const colors = ['white', 'blue', 'black', 'red', 'yellow'];
+        this.players = state.players.map((pState, idx) => {
+            const isLocal = idx === this.localPlayerId;
+            return {
+                ...pState,
+                // 名前は受信者視点で設定
+                name: `Player ${idx + 1} ${isLocal ? '(You)' : '(Remote)'}`,
+                color: colors[idx % colors.length],
+                // ローカルプレイヤーの手札はそのまま、相手の手札は隠す
+                hand: isLocal ? pState.hand : pState.hand.map((c, i) => ({
+                    hidden: true,
+                    instanceId: `hidden_${idx}_${i}`
+                })),
+                isAI: false,
+                isLocal: isLocal,
+                // selectedCardは後で復元する
+                selectedCard: null
+            };
+        });
+
+        this.deck = state.deck || [];
+        this.discardPile = state.discardPile || [];
+        this.roundTokens = state.roundTokens;
+        this.round = state.round || 1;
+        this.phase = state.phase;
+        this.startPlayerIndex = state.startPlayerIndex || 0;
+        this.currentPlayerIndex = state.currentPlayerIndex || 0;
+
+        this.log("ゲームに参加しました");
+        this.log(`あなたはプレイヤー ${this.localPlayerId + 1} です`);
+
+        this.updateUI();
+        this.renderMap();
+    }
+
+    /**
+     * ネットワーク送信用のゲーム状態を取得
+     */
+    getGameStateForNetwork() {
+        return {
+            players: this.players.map(p => ({
+                id: p.id,
+                name: p.name,
+                color: p.color,
+                location: p.location,
+                hand: p.hand,
+                construction: p.construction,
+                resources: p.resources,
+                selectedCard: p.selectedCard ? { instanceId: p.selectedCard.instanceId } : null,
+                roundTokens: p.roundTokens
+            })),
+            roundTokens: this.roundTokens,
+            round: this.round,
+            phase: this.phase,
+            startPlayerIndex: this.startPlayerIndex,
+            currentPlayerIndex: this.currentPlayerIndex,
+            playerCount: this.playerCount
+        };
+    }
+
+    /**
+     * P2Pモードかどうかを返す
+     */
+    isP2PMode() {
+        return this.networkMode === 'host' || this.networkMode === 'guest';
+    }
+
+    /**
+     * ローカルプレイヤーかどうかを判定
+     */
+    isLocalPlayer(player) {
+        if (!this.isP2PMode()) {
+            return !player.isAI;
+        }
+        return player.id === this.localPlayerId;
     }
 
     startSetup() {
@@ -178,25 +658,52 @@ class Game {
         // 2. プレイヤー初期化
         this.players = []; // 空にする
         const colors = ['white', 'blue', 'black', 'red', 'yellow'];
-        const humanIndex = this.simulationMode ? -1 : Math.floor(Math.random() * this.playerCount);
 
-        for (let i = 0; i < this.playerCount; i++) {
-            this.players.push({
-                id: i,
-                name: `Player ${i + 1} ${i === humanIndex ? '(You)' : '(AI)'}`,
-                color: colors[i % colors.length],
-                location: 1, // スタート地点: ノード01
-                hand: [],
-                construction: [],
-                resources: { F: 0, M: 0, K: 0, W: 0 },
-                selectedCard: null, // 計画フェーズ用
-                vp: 0,
-                isAI: (i !== humanIndex), // humanIndex以外はAI
-                aiStrategy: (i !== humanIndex) ? this.getRandomAIStrategy() : null,
-                lastAction: null
-            });
+        if (this.isP2PMode()) {
+            // P2Pモード: 2人対戦
+            for (let i = 0; i < this.playerCount; i++) {
+                const isLocal = i === this.localPlayerId;
+                this.players.push({
+                    id: i,
+                    name: `Player ${i + 1} ${isLocal ? '(You)' : '(Remote)'}`,
+                    color: colors[i % colors.length],
+                    location: 1, // スタート地点: ノード01
+                    hand: [],
+                    construction: [],
+                    resources: { F: 0, M: 0, K: 0, W: 0 },
+                    selectedCard: null,
+                    vp: 0,
+                    isAI: false,
+                    isLocal: isLocal,
+                    aiStrategy: null,
+                    lastAction: null
+                });
+            }
+            this.log(`あなたはプレイヤー ${this.localPlayerId + 1} (${colors[this.localPlayerId]}) です`);
+        } else {
+            // ローカルモード: 従来のロジック
+            const humanIndex = this.simulationMode ? -1 : Math.floor(Math.random() * this.playerCount);
+
+            for (let i = 0; i < this.playerCount; i++) {
+                this.players.push({
+                    id: i,
+                    name: `Player ${i + 1} ${i === humanIndex ? '(You)' : '(AI)'}`,
+                    color: colors[i % colors.length],
+                    location: 1, // スタート地点: ノード01
+                    hand: [],
+                    construction: [],
+                    resources: { F: 0, M: 0, K: 0, W: 0 },
+                    selectedCard: null, // 計画フェーズ用
+                    vp: 0,
+                    isAI: (i !== humanIndex), // humanIndex以外はAI
+                    aiStrategy: (i !== humanIndex) ? this.getRandomAIStrategy() : null,
+                    lastAction: null
+                });
+            }
+            if (humanIndex >= 0) {
+                this.log(`あなたはプレイヤー ${humanIndex + 1} (${colors[humanIndex]}) です`);
+            }
         }
-        this.log(`あなたはプレイヤー ${humanIndex + 1} (${colors[humanIndex]}) です`);
 
         // 3. デッキ作成
         this.createDeck();
@@ -212,16 +719,24 @@ class Game {
         mapNodes.forEach(node => {
             this.nodeStacks[node.id] = [];
         });
-        // スタート時はスタックに入れない（相乗り防止）
-        // this.nodeStacks[1].push(p.id); ← 削除
 
         // 6. ゲーム開始
         this.phase = "plan";
         this.updateUI();
         this.log("ゲーム開始！フェイズ: 計画");
 
-        // AIの計画フェーズ実行
-        this.checkAIPlan();
+        // P2Pモード: ホストからゲストへゲーム状態を送信
+        if (this.networkMode === 'host') {
+            networkManager.broadcast({
+                type: 'GAME_START',
+                gameState: this.getGameStateForNetwork()
+            });
+        }
+
+        // AIの計画フェーズ実行（ローカルモードのみ）
+        if (!this.isP2PMode()) {
+            this.checkAIPlan();
+        }
     }
 
     checkAIPlan() {
@@ -475,8 +990,11 @@ class Game {
     // --- フェーズのロジック ---
 
     selectCardForPlan(player, cardIndex) {
-        // 計画・実行フェーズ両方で人間のターンなら選択可能
-        if (player.isAI) return;
+        // P2Pモード: ローカルプレイヤーのみ操作可能
+        if (this.isP2PMode() && !this.isLocalPlayer(player)) return;
+
+        // ローカルモード: AIは操作不可
+        if (!this.isP2PMode() && player.isAI) return;
 
         // ルール修正: 実行フェーズ中はカード変更不可
         if (this.phase === 'execute') {
@@ -490,8 +1008,10 @@ class Game {
 
         // 計画フェーズで既に選択済みのカードをクリックした場合
         if (this.phase === 'plan' && player.selectedCard === card) {
-            // 解除せずにフェーズ進行
-            this.advancePhase();
+            // P2Pモードではフェーズ進行は両方選択完了時
+            if (!this.isP2PMode()) {
+                this.advancePhase();
+            }
             return;
         }
 
@@ -502,14 +1022,31 @@ class Game {
         } else {
             player.selectedCard = card;
             this.log(`[plan] ${player.name} は ${card.name_jp || card.name} を選択しました。`);
+
+            // P2Pモード: カード選択を相手に通知
+            if (this.isP2PMode()) {
+                networkManager.broadcast({
+                    type: 'CARD_SELECTED',
+                    playerId: player.id,
+                    cardIndex: cardIndex
+                });
+            }
         }
 
         // 選択を表示するためUIを即座に更新
         this.updateUI();
 
-        // 計画フェーズでカード選択時に実行フェーズへ自動進行
+        // 計画フェーズでカード選択時
         if (this.phase === 'plan' && player.selectedCard) {
-            this.advancePhase();
+            if (this.isP2PMode()) {
+                // P2Pモード: 両方選択完了ならフェーズ進行
+                if (this.players.every(p => p.selectedCard)) {
+                    this.advancePhase();
+                }
+            } else {
+                // ローカルモード: 即座にフェーズ進行
+                this.advancePhase();
+            }
         }
     }
 
@@ -521,11 +1058,12 @@ class Game {
         this.opponentsArea.innerHTML = '';
 
         this.players.forEach((p, idx) => {
-            const isHuman = !p.isAI;
-            const container = isHuman ? this.humanArea : this.opponentsArea;
+            // P2Pモードでも正しく判定するためisLocalPlayerを使用
+            const isLocal = this.isLocalPlayer(p);
+            const container = isLocal ? this.humanArea : this.opponentsArea;
             const div = document.createElement('div');
 
-            if (isHuman) {
+            if (isLocal) {
                 div.className = `human-board ${idx === this.currentPlayerIndex && this.phase === 'execute' ? 'active-human' : ''}`;
                 div.style.borderLeft = `5px solid ${p.color}`;
             } else {
@@ -538,7 +1076,7 @@ class Game {
                 const isSel = (p.selectedCard === card);
                 let cardActionHtml = '';
 
-                if (isHuman && isSel) {
+                if (isLocal && isSel) {
                     // このカード専用のアクションブロックを生成
                     if (this.phase === 'execute') {
                         if (idx === this.currentPlayerIndex) {
@@ -578,7 +1116,8 @@ class Game {
                 }
 
                 // ポップオーバー配置用に相対コンテナでラップ
-                if (p.isAI) {
+                // P2Pモードでは相手のカードも裏向きで表示
+                if (!isLocal || card.hidden) {
                     handHtml += `<div style="position:relative; margin:0 2px;"><img src="${cardBackImage}" class="card-preview" style="${isSel ? 'border:2px solid red;' : ''}"></div>`;
                 } else {
                     handHtml += `
@@ -601,7 +1140,7 @@ class Game {
 
             const tableauBlock = `
 <div class="tableau">
-    <div style="font-size: 0.9em; margin-bottom: 5px;" class="tableau-label">${isHuman ? 'Tableau' : 'Built'}:</div>
+    <div style="font-size: 0.9em; margin-bottom: 5px;" class="tableau-label">${isLocal ? 'Tableau' : 'Built'}:</div>
     <div class="tableau-cards">
         ${p.construction.filter(c => c).map(c => `<img src="${c.image_src}" class="card-thumb" title="${c.name_jp}">`).join('')}
     </div>
@@ -625,11 +1164,23 @@ class Game {
 
         this.updateUI();
 
-        if (p.isAI) {
+        if (this.isP2PMode()) {
+            // P2Pモード: ローカルプレイヤーかチェック
+            if (this.isLocalPlayer(p)) {
+                // 自分の手番: UIを操作可能に
+                this.dynamicActions.innerHTML = '';
+                const panel = document.getElementById('action-panel');
+                if (panel) panel.style.display = 'none';
+            } else {
+                // 相手の手番: 待機状態を表示
+                this.log('相手のアクションを待っています...');
+            }
+        } else if (p.isAI) {
+            // ローカルモード: AIターン
             const delay = this.simulationMode ? this.simSpeed : 50;
             setTimeout(() => this.executeAITurn(p), delay);
         } else {
-            // dynamicActionsをクリア - ボタンは手札エリアにある
+            // ローカルモード: 人間のターン
             this.dynamicActions.innerHTML = '';
             const panel = document.getElementById('action-panel');
             if (panel) panel.style.display = 'none';
@@ -1031,8 +1582,19 @@ class Game {
     }
 
     executeMoveWithTarget(player, card, targetNodeId) {
+        // P2Pモード: 移動アクションを相手に送信
+        if (this.isP2PMode() && this.isLocalPlayer(player)) {
+            networkManager.broadcast({
+                type: 'ACTION',
+                action: 'move',
+                playerId: player.id,
+                cardIndex: player.hand.indexOf(card),
+                data: { targetNodeId: targetNodeId }
+            });
+        }
+
         // 移動確定時にボタンを消す（カード上のポップオーバーも）
-        if (!player.isAI) {
+        if (this.isLocalPlayer(player)) {
             this.dynamicActions.innerHTML = '';
             document.querySelectorAll('.card-actions-popover').forEach(el => el.style.display = 'none');
         }
@@ -1045,8 +1607,6 @@ class Game {
         const passengers = this.getPassengers(player);
         if (passengers.length > 0) {
             this.log(`同乗者: ${passengers.map(p => p.name).join(', ')}`);
-            // 注意: 同乗者は通常移動ボーナス/トークンを得ない、ただ乗っているだけ
-            // 得る場合はここにロジックが必要。アクティブプレイヤーのみ周回チェックをトリガーと仮定
         }
 
         const path = this.findPath(player.location, targetNodeId, card.move);
@@ -1272,8 +1832,7 @@ class Game {
 
         if (effect === 'convert_same3_to_W') {
             const r = player.resources;
-            const w = r.W || 0;
-            return ((r.F || 0) + w >= 3) || ((r.M || 0) + w >= 3) || ((r.K || 0) + w >= 3);
+            return ((r.F || 0) >= 3) || ((r.M || 0) >= 3) || ((r.K || 0) >= 3);
         } else if (effect === 'convert_K2_to_W') {
             return ((player.resources.K || 0) + (player.resources.W || 0) >= 2);
         } else if (effect === 'convert_W2_to_W3') {
@@ -1325,24 +1884,10 @@ class Game {
             for (let r of resources) {
                 if ((player.resources[r] || 0) >= 3) { targetRes = r; break; }
             }
-            // 2. ワイルド併用を試す
-            if (!targetRes) {
-                for (let r of resources) {
-                    if ((player.resources[r] || 0) + (player.resources.W || 0) >= 3) { targetRes = r; break; }
-                }
-            }
-
             if (targetRes) {
-                // 差し引き
-                let paid = 0;
-                let currentRes = player.resources[targetRes] || 0;
-                let fromRes = Math.min(3, currentRes);
-                player.resources[targetRes] = currentRes - fromRes;
-                paid += fromRes;
+                // 差し引き (Wは使わない)
+                player.resources[targetRes] = (player.resources[targetRes] || 0) - 3;
 
-                if (paid < 3) {
-                    player.resources.W = (player.resources.W || 0) - (3 - paid);
-                }
 
                 player.resources.W = (player.resources.W || 0) + 1;
                 this.log(`${player.name} は ${targetRes}など3つ を W に変換しました。`);
@@ -1390,6 +1935,18 @@ class Game {
 
         // 使用済みとしてマーク
         if (card) card.usedThisTurn = true;
+
+        // P2Pモード: アクションをブロードキャスト
+        if (this.isP2PMode() && this.isLocalPlayer(player)) {
+            networkManager.broadcast({
+                type: 'ACTION',
+                action: 'convert',
+                playerId: player.id,
+                cardInstanceId: card ? card.instanceId : null,
+                effect: effect,
+                resources: player.resources // 最新のリソース状態を送信
+            });
+        }
     }
 
     payCost(player, cost) {
@@ -1814,6 +2371,19 @@ class Game {
     }
 
     finalizeBuild(player, card, chainRemaining = 0) {
+        // P2Pモード: アクションをブロードキャスト
+        if (this.isP2PMode() && this.isLocalPlayer(player)) {
+            networkManager.broadcast({
+                type: 'ACTION',
+                action: 'build',
+                playerId: player.id,
+                cardInstanceId: card.instanceId,
+                cardId: card.id, // マスターIDを追加
+                chainRemaining: chainRemaining,
+                resources: player.resources // リソース状態を完全同期
+            });
+        }
+
         this.removeCardFromHand(player, card);
         player.selectedCard = null;
         player.construction.push(card);
@@ -1933,14 +2503,44 @@ class Game {
         this.updateUI();
     }
 
-    endTurn() {
+    replenishPlayerHand(player) {
+        // 建設済みカードからのdraw_extraボーナスを計算
+        let drawExtra = 0;
+        player.construction.forEach(c => {
+            if (c.draw_extra) drawExtra += c.draw_extra;
+        });
+        let limit = 3 + drawExtra;
+        let need = limit - player.hand.length;
+        if (need > 0) {
+            this.drawCards(player, need);
+            this.log(`${player.name} はカードを ${need} 枚補充しました。`, true);
+        }
+    }
+
+    performTurnEnd(targetPlayerId) {
+        const player = this.players[targetPlayerId];
+        if (player) {
+            this.replenishPlayerHand(player);
+        }
+
         const pCount = this.players.length || this.playerCount;
-        // console.log(`[DEBUG] EndTurn: current=${this.currentPlayerIndex}, played=${this.turnsPlayedInRound}, pCount=${pCount}`);
         this.currentPlayerIndex = (this.currentPlayerIndex + 1) % pCount;
         this.turnsPlayedInRound++;
 
+        // P2Pモード: 全員にターン終了と更新情報を通知
+        if (this.isP2PMode() && this.networkMode === 'host') {
+            const updateData = {
+                type: 'TURN_UPDATE',
+                currentPlayerIndex: this.currentPlayerIndex,
+                turnsPlayedInRound: this.turnsPlayedInRound,
+                roundTokens: this.roundTokens,
+                replenishedPlayerId: targetPlayerId,
+                newHand: player.hand
+            };
+            networkManager.broadcast(updateData);
+        }
+
         if (this.turnsPlayedInRound >= pCount) {
-            // このラウンド中にゲーム終了がトリガーされたかチェック
             if (this.gameEndTriggered) {
                 this.endGame();
             } else {
@@ -1948,41 +2548,41 @@ class Game {
             }
         } else {
             const delay = this.simulationMode ? 20 : this.simSpeed;
-            // console.log(`Waiting ${delay}ms before next turn`);
-            setTimeout(() => {
-                this.startExecuteTurn();
-            }, delay);
+            if (this.networkMode !== 'guest') {
+                setTimeout(() => {
+                    this.startExecuteTurn();
+                }, delay);
+            }
         }
     }
 
+    endTurn() {
+        // P2Pゲスト: ホストに終了リクエストを送るのみ
+        if (this.isP2PMode() && this.networkMode === 'guest') {
+            networkManager.sendToHost({
+                type: 'REQUEST_TURN_END'
+            });
+            return;
+        }
+
+        // ホスト または ローカル: ターン終了を実行
+        this.performTurnEnd(this.currentPlayerIndex);
+    }
+
     startReplenishPhase() {
+        // P2Pモード: ゲストはホストからの同期を待つため何もしない
+        if (this.isP2PMode() && this.networkMode !== 'host') return;
+
         this.turnsPlayedInRound = 0; // 安全のためリセット
-        this.log("フェイズ: 補充");
+        // this.log("フェイズ: 補充"); // 削除または変更
         this.players.forEach(p => p.lastAction = null); // 新ラウンド用にリセット
         this.updateUI();
         this.dynamicActions.innerHTML = '';
 
-        this.players.forEach(p => {
-            // 建設済みカードからのdraw_extraボーナスを計算
-            let drawExtra = 0;
-            p.construction.forEach(c => {
-                if (c.draw_extra) drawExtra += c.draw_extra;
-            });
-            let limit = 3 + drawExtra;
-            let need = limit - p.hand.length;
-            // デバッグログ
-            console.log(`[Replenish] ${p.name}: Hand=${p.hand.length}, Limit=${limit}, Need=${need}`);
-            if (need > 0) {
-                this.drawCards(p, need);
-                // 新しいサイズを確認
-                console.log(`[Replenish] -> New Hand=${p.hand.length}`);
-            }
-        });
+        // 補充ロジック削除: ターン終了時に都度行うように変更
 
         this.startPlayerIndex = (this.startPlayerIndex + 1) % this.playerCount;
         this.log(`スタートプレイヤーは ${this.players[this.startPlayerIndex].name} になりました`);
-
-        // this.drawCards(this.players[this.startPlayerIndex], 1); // 削除: スタートプレイヤーボーナス
 
         if (this.roundTokens <= 0) {
             this.endGame();
@@ -1992,13 +2592,24 @@ class Game {
             this.phase = 'plan';
             this.nextPhaseBtn.disabled = false;
             this.log("次のラウンドを開始します...");
+
+            // P2Pモード: 新しいラウンド状態をブロードキャスト（手札は含めない）
+            if (this.isP2PMode() && this.networkMode === 'host') {
+                networkManager.broadcast({
+                    type: 'ROUND_REPLENISH',
+                    round: this.round,
+                    roundTokens: this.roundTokens,
+                    phase: this.phase,
+                    startPlayerIndex: this.startPlayerIndex
+                });
+            }
+
             this.updateUI();
             this.checkAIPlan();
-
-            // シミュレーションモードでの自動進行（必要なら）
-            // checkAIPlanはその役割をすでに処理、しかしトリガーが必要かも
         }
     }
+
+
 
     endGame() {
         this.log("=== GAME OVER ===");
@@ -2337,11 +2948,12 @@ class Game {
         this.opponentsArea.innerHTML = '';
 
         this.players.forEach((p, idx) => {
-            const isHuman = !p.isAI;
-            const container = isHuman ? this.humanArea : this.opponentsArea;
+            // P2Pモードでも正しく判定するためisLocalPlayerを使用
+            const isLocal = this.isLocalPlayer(p);
+            const container = isLocal ? this.humanArea : this.opponentsArea;
             const div = document.createElement('div');
 
-            if (isHuman) {
+            if (isLocal) {
                 div.className = `human-board ${idx === this.currentPlayerIndex && this.phase === 'execute' ? 'active-human' : ''}`;
                 div.style.borderLeft = `5px solid ${p.color}`;
             } else {
@@ -2352,7 +2964,8 @@ class Game {
             let handHtml = '';
             p.hand.filter(c => c).forEach((card, cIdx) => {
                 const isSel = (p.selectedCard === card);
-                if (p.isAI) {
+                // P2Pモードでは相手のカードも裏向きで表示
+                if (!isLocal || card.hidden) {
                     handHtml += `<img src="${cardBackImage}" class="card-preview" style="${isSel ? 'border:2px solid red;' : ''}">`;
                 } else {
                     handHtml += `<img src="${card.image_src}" class="card-preview ${isSel ? 'selected-card' : ''}" onclick="window.game.selectCardForPlan(window.game.players[${idx}], ${cIdx})">`;
@@ -2360,7 +2973,7 @@ class Game {
             });
 
             let infoActionsHtml = '';
-            if (isHuman && p.selectedCard) {
+            if (isLocal && p.selectedCard) {
                 if (this.phase === 'execute') {
                     if (idx === this.currentPlayerIndex) {
                         const card = p.selectedCard;
@@ -2473,7 +3086,7 @@ class Game {
 
                 const isConv = c.effect && c.effect.startsWith('convert_');
                 // resolvingActionをチェックしてボタンを無効化
-                const canConv = isConv && isHuman && !this.resolvingAction && this.currentPlayerIndex === idx && this.canConvert(p, c.effect);
+                const canConv = isConv && isLocal && !this.resolvingAction && this.currentPlayerIndex === idx && this.canConvert(p, c.effect);
                 const convClass = isConv ? `card-conversion ${canConv ? 'can-convert' : ''}` : '';
                 const clickHandler = isConv ? `onclick="window.game.tryConversion(window.game.players[${idx}], window.game.players[${idx}].construction[${p.construction.indexOf(c)}])"` : '';
 
@@ -2558,7 +3171,11 @@ class Game {
 
                 if (this.phase === 'execute') {
                     const player = this.players[this.currentPlayerIndex];
-                    if (player && !player.isAI) {
+                    // P2Pモードでは自分の手番のみハイライト表示、ローカルモードでは人間プレイヤーの手番のみ
+                    const shouldShowHighlight = this.isP2PMode()
+                        ? this.isLocalPlayer(player)
+                        : (player && !player.isAI);
+                    if (shouldShowHighlight) {
                         // 1. 選択カード移動ボーナス
                         if (player.selectedCard && player.selectedCard.move_resource && player.selectedCard.move_resource.length > 0) {
                             const reachable = this.getReachableNodes(player.location, player.selectedCard.move);
@@ -2673,7 +3290,8 @@ class Game {
         // Direct Move用の自動ハイライト
         if (this.phase === 'execute') {
             const player = this.players[this.currentPlayerIndex];
-            if (!player.isAI && player.selectedCard) {
+            // P2P対応: 自分の手番かつAIでない場合のみハイライト
+            if (this.isLocalPlayer(player) && player.selectedCard && !player.isAI) {
                 this.highlightReachableNodesForDirectAction(player, player.selectedCard);
             }
         }

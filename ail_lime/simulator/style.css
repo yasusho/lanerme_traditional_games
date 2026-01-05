@@ -131,6 +131,8 @@ h1 {
     background: white;
     font-size: 1.2rem;
     font-weight: 700;
+    color: var(--text-secondary);
+    /* 明示的に色を指定 */
     cursor: pointer;
     transition: all 0.2s;
 }
@@ -145,6 +147,30 @@ h1 {
     display: flex;
     flex-direction: column;
     gap: 15px;
+}
+
+/* P2P Mode Buttons */
+.mode-btn {
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: 2px solid var(--border-color);
+    background: white;
+    font-weight: 600;
+    color: var(--text-secondary);
+    /* 明示的に色を指定 */
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.mode-btn.active {
+    background: var(--accent-color);
+    color: white;
+    border-color: var(--accent-color);
+}
+
+.mode-btn:hover:not(.active) {
+    background: #f0f4f8;
+    border-color: var(--accent-hover);
 }
 
 .modal-content {
