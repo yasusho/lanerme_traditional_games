@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AIL LIME Simulator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* Temporary inline styles for immediate feedback before style.css loads/is perfected */
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; margin: 0; display: flex; height: 100vh; overflow: hidden; }
+    </style>
+</head>
+<body>
+    <!-- Setup Modal -->
+    <div id="setup-modal-overlay" class="modal-overlay">
+        <div class="modal-content setup-modal">
+            <h2>AIL LIME Simulator Setup</h2>
+            <div class="setup-section">
+                <label>プレイヤー人数:</label>
+                <div class="player-count-buttons">
+                    <button class="count-btn" data-count="2">2</button>
+                    <button class="count-btn" data-count="3">3</button>
+                    <button class="count-btn" data-count="4">4</button>
+                    <button class="count-btn active" data-count="5">5</button>
+                </div>
+            </div>
+            <div class="setup-actions">
+                <button id="btn-start-normal" class="btn-primary">ゲーム開始 (自分＋AI)</button>
+                <button id="btn-start-simulation" class="btn-secondary">AI対戦シミュレーション開始</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="game-container" style="display:none;">
+        <!-- Header -->
+        <div class="game-header">
+            <h1>AIL LIME</h1>
+            <div id="game-info">
+                <span>Round: <span id="current-round">1</span></span>
+                <span style="margin-left: 20px;">Remaining RT: <span id="remaining-rt">0</span></span>
+                <span style="margin-left: 20px;">Phase: <span id="current-phase">Setup</span></span>
+            </div>
+        </div>
+
+        <!-- Main Content (Sidebar + Map) -->
+        <div class="main-area">
+            <!-- Sidebar: Opponents -->
+            <div id="sidebar" class="sidebar">
+                <div id="opponents-area">
+                    <!-- Opponents injected here -->
+                </div>
+                <!-- Logs moved here for compactness -->
+                <div id="log-area">
+                    <div class="log-entry">Welcome to AIL LIME.</div>
+                </div>
+            </div>
+
+            <!-- Map -->
+            <div id="map-container" class="map-container">
+                <div class="map-wrapper">
+                    <img id="game-map-image" src="../map.svg" alt="Game Map">
+                    <div id="tokens-layer"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Panel: Human Player -->
+        <div id="human-player-area" class="bottom-panel">
+            <!-- Human player HUD injected here -->
+        </div>
+        
+        <!-- Action Buttons Overlay or Footer -->
+        <div id="action-panel" style="position: fixed; bottom: 20px; right: 20px; z-index: 100;">
+            <button id="btn-next-phase" disabled>Next Phase</button>
+            <div id="dynamic-actions"></div>
+        </div>
+
+        <!-- Payment Modal -->
+        <div id="payment-modal-overlay" class="modal-overlay hidden">
+            <div class="modal-content">
+                <h2>資源の支払い選択</h2>
+                <div id="payment-options"></div>
+                <div class="modal-footer">
+                    <button id="btn-pay-cancel" class="btn-secondary">キャンセル</button>
+                    <button id="btn-pay-confirm" class="btn-primary" disabled>支払う</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Modal -->
+        <div id="results-modal-overlay" class="modal-overlay hidden">
+            <div class="modal-content" style="max-width:600px;">
+                <h2>ゲーム終了結果</h2>
+                <div id="results-summary"></div>
+                <div class="modal-footer">
+                    <button id="btn-restart" class="btn-primary">新しいゲームを開始</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="map_data.js"></script>
+    <script src="cards.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>

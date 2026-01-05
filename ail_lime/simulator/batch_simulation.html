@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>AIL LIME Batch Simulation</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; padding: 20px; background: #1a1a2e; color: #eee; }
+        h1 { color: #4ecdc4; }
+        .controls { margin: 20px 0; }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; background: #4ecdc4; border: none; border-radius: 5px; margin-right: 10px; }
+        button:disabled { background: #666; cursor: not-allowed; }
+        #progress { margin: 20px 0; font-size: 18px; }
+        #results { background: #16213e; padding: 15px; border-radius: 8px; max-height: 400px; overflow-y: auto; }
+        pre { margin: 0; white-space: pre-wrap; font-size: 12px; }
+        .stat-box { display: inline-block; background: #0f3460; padding: 10px 15px; margin: 5px; border-radius: 5px; }
+        .stat-label { font-size: 12px; color: #aaa; }
+        .stat-value { font-size: 24px; font-weight: bold; color: #4ecdc4; }
+    </style>
+</head>
+<body>
+    <h1>AIL LIME バッチシミュレーション</h1>
+    
+    <div class="controls">
+        <label>シミュレーション回数: <input type="number" id="simCount" value="100" min="1" max="1000"></label>
+        <label style="margin-left:20px;">プレイヤー数: 
+            <select id="playerCount">
+                <option value="2">2人</option>
+                <option value="3">3人</option>
+                <option value="4">4人</option>
+                <option value="5" selected>5人</option>
+            </select>
+        </label>
+        <button id="startBtn" onclick="startBatchSimulation()">シミュレーション開始</button>
+        <button id="downloadBtn" onclick="downloadResults()" disabled>JSON ダウンロード</button>
+    </div>
+    
+    <div id="progress">準備完了</div>
+    
+    <div id="summary" style="display:none;">
+        <h3>サマリー</h3>
+        <div id="summaryStats"></div>
+    </div>
+    
+    <div id="results">
+        <pre id="resultsText">結果がここに表示されます...</pre>
+    </div>
+
+    <!-- Hidden game container -->
+    <div id="game-container" style="display:none;">
+        <div id="tokens-layer"></div>
+        <div id="human-player-area"></div>
+        <div id="opponents-area"></div>
+        <div id="log-area"></div>
+        <button id="btn-next-phase"></button>
+        <div id="dynamic-actions"></div>
+    </div>
+
+    <script src="map_data.js"></script>
+    <script src="cards.js"></script>
+    <!-- game.js is NOT loaded - HeadlessGame is self-contained -->
+    <script>
+        let allResults = [];
+        let isRunning = false;
+
+        async function startBatchSimulation() {
+            if (isRunning) return;
+            isRunning = true;
+            
+            const simCount = parseInt(document.getElementById('simCount').value);
+            const playerCount = parseInt(document.getElementById('playerCount').value);
+            
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('downloadBtn').disabled = true;
+            allResults = [];
+            
+            for (let i = 0; i < simCount; i++) {
+                document.getElementById('progress').textContent = `シミュレーション中... ${i + 1} / ${simCount}`;
+                
+                try {
+                    const result = await runSingleSimulation(playerCount, i);
+                    allResults.push(result);
+                } catch (e) {
+                    console.error(`Simulation ${i + 1} failed:`, e);
+                    allResults.push({ error: e.message, gameId: i });
+                }
+                
+                // Allow UI to update
+                await new Promise(r => setTimeout(r, 10));
+            }
+            
+            document.getElementById('progress').textContent = `完了！${simCount} 回のシミュレーションが終了しました`;
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('downloadBtn').disabled = false;
+            
+            displaySummary();
+            document.getElementById('resultsText').textContent = JSON.stringify(allResults, null, 2);
+            isRunning = false;
+        }
+
+        function runSingleSimulation(playerCount, gameId) {
+            return new Promise((resolve, reject) => {
+                try {
+                    // Create a minimal game instance for headless simulation
+                    const sim = new HeadlessGame(playerCount, gameId);
+                    sim.run((result) => {
+                        resolve(result);
+                    });
+                } catch (e) {
+                    reject(e);
+                }
+            });
+        }
+
+        class HeadlessGame {
+            constructor(playerCount, gameId) {
+                this.gameId = gameId;
+                this.playerCount = playerCount;
+                this.players = [];
+                this.deck = [];
+                this.discardPile = [];
+                this.roundTokens = playerCount * 3;
+                this.round = 1;
+                this.phase = 'plan';
+                this.startPlayerIndex = 0;
+                this.currentPlayerIndex = 0;
+                this.nodeStacks = {};
+                this.maxRounds = 50; // Safety limit
+                this.peakResources = { F: 0, M: 0, K: 0, W: 0, total: 0 }; // Peak resource tracking
+                
+                this.initPlayers();
+                this.createDeck();
+                this.shuffleDeck();
+                this.dealInitialCards();
+            }
+
+            initPlayers() {
+                const colors = ['white', 'blue', 'black', 'red', 'yellow'];
+                for (let i = 0; i < this.playerCount; i++) {
+                    this.players.push({
+                        id: i,
+                        name: `Player ${i + 1}`,
+                        color: colors[i % colors.length],
+                        location: 1,
+                        hand: [],
+                        construction: [],
+                        resources: { F: 0, M: 0, K: 0, W: 0 },
+                        selectedCard: null,
+                        roundTokens: 0,
+                        isAI: true,
+                        aiStrategy: this.getRandomAIStrategy()
+                    });
+                }
+                
+                // Initialize node stacks
+                // mapNodes is global
+                this.nodeStacks = {};
+                mapNodes.forEach(n => this.nodeStacks[n.id] = []);
+                // this.nodeStacks[1] = this.players.map(p => p.id); // Removed as per game.js logic
+            }
+
+            getRandomAIStrategy() {
+                const strategies = ['Balanced', 'Hoarder', 'Rusher', 'Naive'];
+                // Weighted random? Or equal? Equal for now.
+                return strategies[Math.floor(Math.random() * strategies.length)];
+            }
+
+            createDeck() {
+                cardsData.forEach(cardDef => {
+                    for (let i = 0; i < cardDef.count; i++) {
+                        this.deck.push({ ...cardDef });
+                    }
+                });
+            }
+
+            shuffleDeck() {
+                for (let i = this.deck.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [this.deck[i], this.deck[j]] = [this.deck[j], this.deck[i]];
+                }
+            }
+
+            dealInitialCards() {
+                this.players.forEach(p => this.drawCards(p, 3));
+            }
+
+            drawCards(player, count) {
+                for (let i = 0; i < count; i++) {
+                    if (this.deck.length === 0) {
+                        this.deck = [...this.discardPile];
+                        this.discardPile = [];
+                        this.shuffleDeck();
+                    }
+                    if (this.deck.length > 0) {
+                        player.hand.push(this.deck.pop());
+                    }
+                }
+            }
+
+            run(callback) {
+                while (this.roundTokens > 0 && this.round < this.maxRounds) {
+                    this.runRound();
+                }
+                callback(this.getResult());
+            }
+
+            runRound() {
+                // Plan Phase - All AI select cards
+                this.players.forEach(p => {
+                    if (p.hand.length > 0) {
+                        p.selectedCard = this.selectBestCard(p);
+                    }
+                });
+
+                // Execute Phase
+                for (let turn = 0; turn < this.playerCount; turn++) {
+                    this.currentPlayerIndex = (this.startPlayerIndex + turn) % this.playerCount;
+                    const player = this.players[this.currentPlayerIndex];
+                    if (player.selectedCard) {
+                        this.executeAITurn(player);
+                    }
+                }
+                // Track peak resources after each player's turn
+                this.updatePeakResources();
+                
+                // Check if game end was triggered in this round (Equal turns)
+                if (this.gameEndTriggered) {
+                     this.endGame();
+                     return;
+                }
+
+                // Replenish Phase
+                this.players.forEach(p => {
+                    let drawExtra = 0;
+                    p.construction.forEach(c => { if (c.draw_extra) drawExtra += c.draw_extra; });
+                    const limit = 3 + drawExtra;
+                    const need = limit - p.hand.length;
+                    if (need > 0) this.drawCards(p, need);
+                });
+
+                this.startPlayerIndex = (this.startPlayerIndex + 1) % this.playerCount;
+                // this.drawCards(this.players[this.startPlayerIndex], 1); // DISABLED: Testing without start player bonus
+                this.round++;
+            }
+
+            selectBestCard(player) {
+                let bestCard = null;
+                let maxScore = -Infinity;
+
+                player.hand.forEach(card => {
+                    const score = this.calculateCardScore(player, card);
+                    // Add small random noise to break ties (-5 to +5)
+                    const noise = Math.random() * 10 - 5;
+                    const finalScore = score + noise;
+
+                    if (finalScore > maxScore) {
+                        maxScore = finalScore;
+                        bestCard = card;
+                    }
+                });
+                return bestCard;
+            }
+
+            calculateCardScore(player, card) {
+                let score = 0;
+                let canBuild = this.canBuild(player, card);
+
+                // Check if buildable via conversion
+                if (!canBuild) {
+                    const convCards = player.construction.filter(c => c.effect && c.effect.startsWith('convert_'));
+                    if (convCards.length > 0) {
+                        // Simple simulation: Can we build if we convert?
+                        // NOTE: This reuses logic from executeAIConversions but returns boolean
+                        if (this.canBuildWithConversion(player, card, convCards)) {
+                             canBuild = true;
+                             // Slight penalty compared to direct build to prefer direct if possible? 
+                             // Or maybe bonus because we use our engine?
+                             // Let's treat it as buildable but maybe 10% less attractive? 
+                             // Actually, if it's the *only* way to build, score += 1000 is huge anyway.
+                        }
+                    }
+                }
+
+                if (canBuild) {
+                    score += 1000; // Base score for being buildable
+
+                    // VP Value
+                    let vpVal = card.vp || 0;
+                    if (card.vp_logic === 'variable') vpVal = 2; 
+                    score += vpVal * 20;
+
+                    // Production Value
+                    if (card.production) score += 50;
+
+                    // Effect Value
+                    if (card.effect) score += 30;
+                } else {
+                    // Cannot build, prioritize utility as move
+                    score += (card.move || 0) * 10;
+                    if (card.move >= 3) score += 20;
+                    if (card.move_resource && card.move_resource.length > 0) score += 30;
+                    if (card.move === 0) score -= 50;
+
+                     // --- AI PERSONALITY LOGIC ---
+                    const strategy = player.aiStrategy || 'Naive';
+                    
+                    // Card Value
+                    let cardValue = 0;
+                    if (card.vp >= 2 || (card.vp_logic && card.vp_logic !== 'none')) cardValue += 50;
+                    if (card.production) cardValue += 30;
+                    if (card.cost && (card.cost.F + card.cost.M + card.cost.K >= 4)) cardValue += 40;
+
+                    if (strategy === 'Balanced') {
+                        score -= cardValue * 2; 
+                        if (card.move >= 3) score += 10;
+                    } else if (strategy === 'Hoarder') {
+                        score -= cardValue * 10; 
+                    } else if (strategy === 'Rusher') {
+                        if (card.move >= 3) score += 100;
+                    }
+                }
+                return score;
+            }
+
+            canBuild(player, card) {
+                if (!card.cost) return false;
+                if (card.cost.multi === 'same3') {
+                    const max = Math.max(player.resources.F, player.resources.M, player.resources.K);
+                    return max + player.resources.W >= 3;
+                }
+                let deficit = 0;
+                for (let r in card.cost) {
+                    if (r === 'multi') continue;
+                    const needed = card.cost[r] - (player.resources[r] || 0);
+                    if (needed > 0) deficit += needed;
+                }
+                return player.resources.W >= deficit;
+            }
+
+            executeAITurn(player) {
+                const card = player.selectedCard;
+                
+                // Use conversions first
+                this.executeAIConversions(player);
+                
+                if (this.canBuild(player, card)) {
+                    this.executeBuild(player, card);
+                } else {
+                    this.executeMove(player, card);
+                }
+                
+                player.selectedCard = null;
+            }
+
+            executeAIConversions(player) {
+                const targetCard = player.selectedCard;
+                if (!targetCard || this.canBuild(player, targetCard)) return;
+
+                const convCards = player.construction.filter(c => c.effect && c.effect.startsWith('convert_'));
+                
+                let madeProgress = true;
+                let iterations = 0;
+                while (madeProgress && iterations < 10) {
+                    madeProgress = false;
+                    iterations++;
+
+                    for (const card of convCards) {
+                        if (!this.canConvert(player, card)) continue;
+                        if (card.usedThisTurn) continue; // Skip used cards
+
+                        const effect = card.effect;
+                        const tempRes = { ...player.resources };
+                        let appliedSimulation = false;
+
+                        if (effect === 'convert_same3_to_W') {
+                             for (const r of ['F', 'M', 'K']) {
+                                 if ((tempRes[r] || 0) >= 3) {
+                                     tempRes[r] -= 3;
+                                     tempRes.W = (tempRes.W || 0) + 1;
+                                     appliedSimulation = true;
+                                     break;
+                                 }
+                             }
+                        } else if (effect === 'convert_K2_to_W') {
+                             if ((tempRes.K || 0) >= 2) {
+                                 tempRes.K -= 2;
+                                 tempRes.W = (tempRes.W || 0) + 1;
+                                 appliedSimulation = true;
+                             }
+                        } else if (effect === 'convert_W2_to_W3') {
+                                // Updated: W2 -> W3
+                                if ((tempRes.W || 0) >= 2) {
+                                     tempRes.W -= 2;
+                                     tempRes.W = (tempRes.W || 0) + 3;
+                                     appliedSimulation = true;
+                                }
+                        } else if (effect === 'convert_KMF_to_W') {
+                            if ((tempRes.K || 0) >= 1 && (tempRes.M || 0) >= 1 && (tempRes.F || 0) >= 1) {
+                                 tempRes.K--; tempRes.M--; tempRes.F--;
+                                 tempRes.W = (tempRes.W || 0) + 1;
+                                 appliedSimulation = true;
+                            }
+                        }
+
+                        if (appliedSimulation) {
+                            const fakePlayer = { ...player, resources: tempRes };
+                            if (this.canBuild(fakePlayer, targetCard)) {
+                                this.applyConversion(player, card);
+                                card.usedThisTurn = true; // Mark as used
+                                madeProgress = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            canBuildWithConversion(player, targetCard, convCards) {
+                 // Simulate if we can build targetCard using any of convCards
+                 // Simple greedy approach (same as executeAIConversions)
+                 // Copy the logic or reuse? Since we can't easily extract to shared standalone function without refactoring,
+                 // we duplicate the logic for safety in this HTML file context.
+                 
+                 let simulatedRes = { ...player.resources };
+                 // We don't need full loop, just "is it possible?"
+                 // Deep search is expensive. Shallow search (single conversion) is likely enough for 90% cases.
+                 // Let's support up to 2 conversions depth.
+                 
+                 for (let i=0; i<2; i++) { // Max depth 2
+                     let changed = false;
+                     for (const card of convCards) {
+                         const effect = card.effect;
+                         // Check raw condition on simulatedRes
+                         // Note: canConvert uses player.resources directly, so we need manual check or mock player
+                         let possible = false;
+                         
+                         // Manual check used in executeAIConversions simulation
+                         if (effect === 'convert_same3_to_W') {
+                             if (simulatedRes.F>=3 || simulatedRes.M>=3 || simulatedRes.K>=3) possible=true; 
+                         } else if (effect === 'convert_K2_to_W') {
+                             if (simulatedRes.K>=2) possible=true;
+                         } else if (effect === 'convert_W2_to_W3') {
+                             if (simulatedRes.W>=2) possible=true;
+                         } else if (effect === 'convert_KMF_to_W') {
+                             if (simulatedRes.F>=1 && simulatedRes.M>=1 && simulatedRes.K>=1) possible=true;
+                         }
+
+                         if (possible) {
+                             // Apply
+                             if (effect === 'convert_same3_to_W') {
+                                 for (const r of ['F', 'M', 'K']) {
+                                     if (simulatedRes[r] >= 3) { simulatedRes[r]-=3; simulatedRes.W=(simulatedRes.W||0)+1; break; }
+                                 }
+                             } else if (effect === 'convert_K2_to_W') {
+                                 simulatedRes.K-=2; simulatedRes.W=(simulatedRes.W||0)+1;
+                             } else if (effect === 'convert_W2_to_W3') {
+                                 simulatedRes.W-=2; simulatedRes.W=(simulatedRes.W||0)+3;
+                             } else if (effect === 'convert_KMF_to_W') {
+                                 simulatedRes.F--; simulatedRes.M--; simulatedRes.K--; simulatedRes.W=(simulatedRes.W||0)+1;
+                             }
+                             changed = true;
+                             
+                             // Check buildability
+                             const fakePlayer = { ...player, resources: simulatedRes };
+                             if (this.canBuild(fakePlayer, targetCard)) return true;
+                         }
+                     }
+                     if (!changed) break; 
+                 }
+                 return false;
+            }
+
+            canConvert(player, card) {
+                const effect = card.effect;
+                const r = player.resources;
+                if (effect === 'convert_same3_to_W') {
+                    return (r.F >= 3) || (r.M >= 3) || (r.K >= 3) || 
+                           (r.F + r.W >= 3 && r.F >= 1) || 
+                           (r.M + r.W >= 3 && r.M >= 1) || 
+                           (r.K + r.W >= 3 && r.K >= 1);
+                }
+                if (effect === 'convert_K2_to_W') return r.K + r.W >= 2;
+                if (effect === 'convert_KMF_to_W') {
+                    const def = Math.max(0, 1 - r.F) + Math.max(0, 1 - r.M) + Math.max(0, 1 - r.K);
+                    return r.W >= def && (r.F >= 1 || r.M >= 1 || r.K >= 1);
+                }
+                return false;
+            }
+
+            applyConversion(player, card) {
+                const effect = card.effect;
+                const r = player.resources;
+                if (effect === 'convert_same3_to_W') {
+                    for (let res of ['F', 'M', 'K']) {
+                        if (r[res] >= 3) { r[res] -= 3; r.W++; return; }
+                    }
+                    for (let res of ['F', 'M', 'K']) {
+                        if (r[res] + r.W >= 3 && r[res] >= 1) {
+                            const from = Math.min(3, r[res]);
+                            r[res] -= from;
+                            r.W -= (3 - from);
+                            r.W++;
+                            return;
+                        }
+                    }
+                } else if (effect === 'convert_K2_to_W') {
+                    const fromK = Math.min(2, r.K);
+                    r.K -= fromK;
+                    r.W -= (2 - fromK);
+                    r.W++;
+                } else if (effect === 'convert_KMF_to_W') {
+                    ['F', 'M', 'K'].forEach(res => {
+                        if (r[res] >= 1) r[res]--;
+                        else r.W--;
+                    });
+                    r.W++;
+                }
+            }
+
+            executeBuild(player, card) {
+                this.payBuildCost(player, card);
+                this.removeFromHand(player, card);
+                const builtApp = { ...card, builtAt: this.round };
+                player.construction.push(builtApp);
+                
+                // Handle chain builds
+                let chain = card.chain_build || 0;
+                while (chain > 0 && player.hand.length > 0) {
+                    const buildable = player.hand.filter(c => this.canBuild(player, c));
+                    if (buildable.length === 0) break;
+                    const next = buildable[Math.floor(Math.random() * buildable.length)];
+                    this.payBuildCost(player, next);
+                    this.removeFromHand(player, next);
+                    player.construction.push({ ...next, builtAt: this.round });
+                    chain = chain - 1 + (next.chain_build || 0);
+                }
+            }
+
+            payBuildCost(player, card) {
+                if (!card.cost) return;
+                if (card.cost.multi === 'same3') {
+                    for (let res of ['F', 'M', 'K']) {
+                        if (player.resources[res] >= 3) { player.resources[res] -= 3; return; }
+                    }
+                    for (let res of ['F', 'M', 'K']) {
+                        if (player.resources[res] + player.resources.W >= 3) {
+                            const from = Math.min(3, player.resources[res]);
+                            player.resources[res] -= from;
+                            player.resources.W -= (3 - from);
+                            return;
+                        }
+                    }
+                } else { // Added this else block for general cost handling
+                    for (let r in card.cost) {
+                        if (r === 'multi') continue;
+                        const needed = card.cost[r];
+                        const has = player.resources[r] || 0;
+                        if (has >= needed) {
+                            player.resources[r] -= needed;
+                        } else {
+                            player.resources[r] = 0;
+                            player.resources.W -= (needed - has);
+                        }
+                    }
+                }
+            }
+
+            executeMove(player, card) {
+                this.discardPile.push(card);
+                this.removeFromHand(player, card);
+                
+                
+                const steps = card.move || 0;
+                // 0歩移動（その場に留まる）も、リソース獲得などの処理を行うため続行する
+                // if (steps === 0) return; 
+
+
+                const reachable = this.getReachableNodes(player.location, steps);
+                // Smart Move Logic
+                let bestTarget = player.location;
+                if (reachable.length > 0) {
+                    const scoredTargets = reachable.map(targetId => {
+                        let score = 0;
+                        const nodeData = mapNodes.find(n => n.id === targetId);
+                        const path = this.findPath(player.location, targetId, steps);
+
+                        // A: Loop
+                        let loopBonus = 50;
+                        if (player.aiStrategy === 'Rusher') loopBonus = 150;
+                        if (this.checkLoop(path)) {
+                            score += loopBonus;
+                            // Check double loop for move 10? Headless simplified.
+                        }
+
+                        // B: Needed Resources
+                        let needBonus = 20;
+                        if (player.aiStrategy === 'Hoarder') needBonus = 80;
+                        else if (player.aiStrategy === 'Rusher') needBonus = 10;
+                        
+                        if (nodeData && ['F','M','K'].includes(nodeData.resource)) {
+                             // Simple check: does player need this?
+                             // Headless simplified check
+                             const needed = player.hand.some(c => {
+                                 if(!c.cost) return false;
+                                 if(c.cost[nodeData.resource]) return player.resources[nodeData.resource] < c.cost[nodeData.resource];
+                                 return false;
+                             });
+                             if (needed) score += needBonus;
+                        }
+
+                        // C: Forward Progress
+                        const currIdx = parseInt(player.location);
+                        const tIdx = parseInt(targetId);
+                        const progress = (tIdx - currIdx + 10) % 10 || 10;
+                        score += progress;
+
+                        return { id: targetId, score };
+                    });
+
+                    scoredTargets.sort((a, b) => b.score - a.score);
+                    bestTarget = scoredTargets[0].id;
+                }
+                
+                const target = bestTarget;
+                
+                // Check for loop
+                const path = this.findPath(player.location, target, steps);
+                if (this.checkLoop(path)) {
+                    if (this.roundTokens > 0) {
+                        player.roundTokens = (player.roundTokens || 0) + 1;
+                        this.roundTokens--;
+                    }
+                }
+                
+                // Reset turn flags
+                player.construction.forEach(c => c.usedThisTurn = false);
+
+                if (this.roundTokens <= 0) {
+                     this.gameEndTriggered = true;
+                }
+                // player.roundTokens--; // Removed incorrect decrement
+                
+                const oldLoc = player.location;
+                
+                // Carry Logic (Phase 1: Identify Passengers)
+                let passengers = [];
+                if (this.nodeStacks[oldLoc]) {
+                    const idx = this.nodeStacks[oldLoc].indexOf(player.id);
+                    if (idx !== -1) {
+                         // Players ABOVE this player are passengers
+                         const pIds = this.nodeStacks[oldLoc].slice(idx + 1);
+                         passengers = this.players.filter(p => pIds.includes(p.id));
+                    }
+                }
+                
+                player.location = target;
+                passengers.forEach(p => p.location = target); // Move passengers
+                
+                // Update Stacks
+                const movingIds = [player.id, ...passengers.map(p => p.id)];
+                // Remove from old
+                if (this.nodeStacks[oldLoc]) {
+                    this.nodeStacks[oldLoc] = this.nodeStacks[oldLoc].filter(id => !movingIds.includes(id));
+                }
+                // Add to new
+                if (!this.nodeStacks[target]) this.nodeStacks[target] = [];
+                this.nodeStacks[target].push(...movingIds);
+
+                
+                // Gain resources
+                if (card.move_resource && card.move_resource.length > 0) {
+                    const res = card.move_resource[Math.floor(Math.random() * card.move_resource.length)];
+                    player.resources[res] = (player.resources[res] || 0) + 1;
+                }
+                
+                const node = mapNodes.find(n => n.id === target);
+                if (node) {
+                    if (node.resource === 'FMK') {
+                        const choice = ['F', 'M', 'K'][Math.floor(Math.random() * 3)];
+                        player.resources[choice]++;
+                    } else if (node.resource === 'Card') {
+                        this.drawCards(player, 1);
+                    } else if (node.resource) {
+                        player.resources[node.resource] = (player.resources[node.resource] || 0) + 1;
+                    }
+
+                    // Share Ride Bonus for Passengers (Node Reward ONLY)
+                    passengers.forEach(p => {
+                        if (node.resource === 'FMK') {
+                             const choice = ['F', 'M', 'K'][Math.floor(Math.random() * 3)];
+                             p.resources[choice] = (p.resources[choice] || 0) + 1;
+                        } else if (node.resource === 'Card') {
+                             this.drawCards(p, 1);
+                        } else if (['F', 'M', 'K'].includes(node.resource)) {
+                             p.resources[node.resource] = (p.resources[node.resource] || 0) + 1;
+                        }
+                    });
+                    
+                    // Triggered production
+                    if (['F', 'M', 'K'].includes(node.resource)) {
+                        player.construction.forEach(c => {
+                            if (c.production_condition === node.resource && c.production) {
+                                for (let r in c.production) {
+                                    const val = c.production[r];
+                                    if (typeof val === 'number') {
+                                        player.resources[r] = (player.resources[r] || 0) + val;
+                                    } else if (val === 'variable' && c.production_formula) {
+                                        // Handle variable production
+                                        let count = 0;
+                                        if (c.production_formula.includes('culture_cards')) {
+                                            count = player.construction.filter(x => x.type === 'culture').length;
+                                        } else if (c.production_formula.includes('industry_cards')) {
+                                            count = player.construction.filter(x => x.type === 'industry').length;
+                                        } else if (c.production_formula.includes('politics_cards')) {
+                                            count = player.construction.filter(x => x.type === 'politics').length;
+                                        }
+                                        player.resources[r] = (player.resources[r] || 0) + count;
+                                    }
+                                }
+                            }
+                        });
+                    }
+                }
+            }
+
+            removeFromHand(player, card) {
+                const idx = player.hand.indexOf(card);
+                if (idx !== -1) player.hand.splice(idx, 1);
+            }
+
+            getReachableNodes(startId, steps) {
+                if (steps === 0) return [startId];
+                let queue = [{ id: startId, path: [startId], dist: 0 }];
+                let valid = new Set();
+                while (queue.length > 0) {
+                    const cur = queue.shift();
+                    if (cur.dist === steps) { valid.add(cur.id); continue; }
+                    const node = mapNodes.find(n => n.id === cur.id);
+                    if (node && node.connections) {
+                        node.connections.forEach(next => {
+                            if (!cur.path.includes(next)) {
+                                queue.push({ id: next, path: [...cur.path, next], dist: cur.dist + 1 });
+                            }
+                        });
+                    }
+                }
+                return valid.size > 0 ? Array.from(valid) : [startId];
+            }
+
+            findPath(from, to, steps) {
+                if (from === to) return [from];
+                let queue = [{ id: from, path: [from] }];
+                while (queue.length > 0) {
+                    const cur = queue.shift();
+                    if (cur.path.length > steps + 1) continue;
+                    if (cur.id === to && cur.path.length === steps + 1) return cur.path;
+                    const node = mapNodes.find(n => n.id === cur.id);
+                    if (node && node.connections) {
+                        node.connections.forEach(next => {
+                            if (!cur.path.includes(next)) {
+                                queue.push({ id: next, path: [...cur.path, next] });
+                            }
+                        });
+                    }
+                }
+                return [from];
+            }
+
+            checkLoop(path) {
+                for (let i = 0; i < path.length - 1; i++) {
+                    if (path[i] === 10 && path[i + 1] === 1) return true;
+                }
+                return false;
+            }
+
+            updateStacks(player, from, to) {
+                if (this.nodeStacks[from]) {
+                    this.nodeStacks[from] = this.nodeStacks[from].filter(id => id !== player.id);
+                }
+                if (!this.nodeStacks[to]) this.nodeStacks[to] = [];
+                this.nodeStacks[to].push(player.id);
+            }
+
+            calculateVP(player) {
+                let vp = 0;
+                player.construction.forEach(c => {
+                    if (c.vp_logic === 'variable') {
+                        const counts = {
+                            culture: player.construction.filter(x => x.type === 'culture').length,
+                            industry: player.construction.filter(x => x.type === 'industry').length,
+                            politics: player.construction.filter(x => x.type === 'politics').length
+                        };
+                        if (c.vp_formula) {
+                            if (c.vp_formula.includes('min(culture, industry, politics)')) {
+                                vp += 2 * Math.min(counts.culture, counts.industry, counts.politics);
+                            } else if (c.vp_formula.includes('round_tokens')) {
+                                vp += 2 * (player.roundTokens || 0);
+                            } else if (c.vp_formula.includes('culture_cards') || c.vp_formula.includes('culture')) {
+                                vp += counts.culture;
+                            } else if (c.vp_formula.includes('industry_cards') || c.vp_formula.includes('industry')) {
+                                vp += counts.industry;
+                            } else if (c.vp_formula.includes('politics_cards') || c.vp_formula.includes('politics')) {
+                                vp += counts.politics;
+                            }
+                        }
+                    } else {
+                        vp += c.vp || 0;
+                    }
+                });
+                // Round token bonus
+                const rt = player.roundTokens || 0;
+                if (rt === 1) vp += 1;
+                else if (rt === 2) vp += 3;
+                else if (rt === 3) vp += 6;
+                else if (rt === 4) vp += 10;
+                else if (rt >= 5) vp += 10 + (rt - 4) * 3;
+                
+                return vp;
+            }
+
+            updatePeakResources() {
+                let totals = { F: 0, M: 0, K: 0, W: 0 };
+                this.players.forEach(p => {
+                    totals.F += p.resources.F || 0;
+                    totals.M += p.resources.M || 0;
+                    totals.K += p.resources.K || 0;
+                    totals.W += p.resources.W || 0;
+                });
+                const totalAll = totals.F + totals.M + totals.K + totals.W;
+                
+                if (totals.F > this.peakResources.F) this.peakResources.F = totals.F;
+                if (totals.M > this.peakResources.M) this.peakResources.M = totals.M;
+                if (totals.K > this.peakResources.K) this.peakResources.K = totals.K;
+                if (totals.W > this.peakResources.W) this.peakResources.W = totals.W;
+                if (totalAll > this.peakResources.total) this.peakResources.total = totalAll;
+            }
+
+            endGame() {
+                this.isRunning = false;
+                if (this.onComplete) {
+                    this.onComplete(this.getResult());
+                }
+            }
+
+            getResult() {
+                const results = this.players.map(p => ({
+                    id: p.id,
+                    name: p.name,
+                    vp: this.calculateVP(p),
+                    roundTokens: p.roundTokens,
+                    builtCards: p.construction.map(c => ({ name: c.name_jp, round: c.builtAt || 0 })),
+                    builtCount: p.construction.length,
+                    finalResources: { ...p.resources },
+                    aiStrategy: p.aiStrategy
+                }));
+                
+                results.sort((a, b) => b.vp - a.vp);
+                
+                return {
+                    gameId: this.gameId,
+                    playerCount: this.playerCount,
+                    peakResources: { ...this.peakResources },
+                    totalRounds: this.round - 1,
+                    winner: results[0].name,
+                    winnerVP: results[0].vp,
+                    players: results
+                };
+            }
+        }
+
+        function displaySummary() {
+            const summary = document.getElementById('summary');
+            const statsDiv = document.getElementById('summaryStats');
+            summary.style.display = 'block';
+            
+            const wins = {};
+            let totalRounds = 0;
+            let totalVP = 0;
+            const cardCounts = {};
+            
+            allResults.forEach(r => {
+                if (r.error) return;
+                wins[r.winner] = (wins[r.winner] || 0) + 1;
+                totalRounds += r.totalRounds;
+                r.players.forEach(p => {
+                    totalVP += p.vp;
+                    p.builtCards.forEach(c => {
+                        cardCounts[c] = (cardCounts[c] || 0) + 1;
+                    });
+                });
+            });
+            
+            const avgRounds = (totalRounds / allResults.length).toFixed(1);
+            const avgVP = (totalVP / (allResults.length * parseInt(document.getElementById('playerCount').value))).toFixed(1);
+            
+            let html = `
+                <div class="stat-box"><div class="stat-label">平均ラウンド数</div><div class="stat-value">${avgRounds}</div></div>
+                <div class="stat-box"><div class="stat-label">平均VP</div><div class="stat-value">${avgVP}</div></div>
+            `;
+            
+            // Top built cards
+            const topCards = Object.entries(cardCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
+            html += `<h4>よく建設されるカード TOP5</h4><ol>`;
+            topCards.forEach(([name, count]) => {
+                html += `<li>${name}: ${count}回</li>`;
+            });
+            html += `</ol>`;
+            
+            statsDiv.innerHTML = html;
+        }
+
+        function downloadResults() {
+            const data = {
+                timestamp: new Date().toISOString(),
+                simulationCount: allResults.length,
+                playerCount: parseInt(document.getElementById('playerCount').value),
+                games: allResults
+            };
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `ail_lime_simulation_${allResults.length}games_${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>
