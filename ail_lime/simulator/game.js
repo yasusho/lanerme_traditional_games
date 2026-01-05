@@ -1010,6 +1010,7 @@ class Game {
 
     /**
      * 指定歩数で到達可能な全ノードIDを取得
+     * 行き止まりマス（接続先1つ）では折り返しを許可
      * @param {number} startId 開始ノードID
      * @param {number} steps 移動歩数
      * @returns {Array<number>} 到達可能なノードIDの配列
@@ -1024,8 +1025,14 @@ class Game {
             const node = mapNodes.find(n => n.id === cur.id);
             if (node && node.connections) {
                 node.connections.forEach(next => {
-                    // 以前訪れたノードには戻らない（単純パス）
-                    if (!cur.path.includes(next)) {
+                    // 行き止まりノード（接続先1つ）の場合は折り返しを許可
+                    const isDeadEnd = node.connections.length === 1;
+                    // 同じノードを連続で2回以上踏まないようにする（無限ループ防止）
+                    // ただし、行き止まりからの折り返しは許可
+                    const lastVisit = cur.path.lastIndexOf(next);
+                    const canVisit = lastVisit === -1 || (isDeadEnd && lastVisit !== cur.path.length - 1);
+
+                    if (canVisit) {
                         queue.push({ id: next, path: [...cur.path, next], dist: cur.dist + 1 });
                     }
                 });
@@ -1036,6 +1043,7 @@ class Game {
 
     /**
      * 最短経路探索（幅優先探索）
+     * 行き止まりマス（接続先1つ）では折り返しを許可
      * @param {number} from 開始ノードID
      * @param {number} to 目標ノードID
      * @param {number} steps 正確な歩数（指定された場合、その歩数での経路を探す）
@@ -1055,7 +1063,12 @@ class Game {
             const node = mapNodes.find(n => n.id === cur.id);
             if (node && node.connections) {
                 node.connections.forEach(next => {
-                    if (!cur.path.includes(next)) {
+                    // 行き止まりノード（接続先1つ）の場合は折り返しを許可
+                    const isDeadEnd = node.connections.length === 1;
+                    const lastVisit = cur.path.lastIndexOf(next);
+                    const canVisit = lastVisit === -1 || (isDeadEnd && lastVisit !== cur.path.length - 1);
+
+                    if (canVisit) {
                         queue.push({ id: next, path: [...cur.path, next] });
                     }
                 });
@@ -1807,6 +1820,9 @@ class Game {
                     this.log(`ペデ到着！${choice}を獲得！`);
                 }
             } else if (node.resource === 'Card') {
+                console.log('[DEBUG] finishMove: Cardノード到着、drawCards呼び出し', { nodeId: node.id, player: player.name });
+                // ボーナスドローとしてカウント（補充計算から除外される）
+                player.bonusDrawsThisTurn = (player.bonusDrawsThisTurn || 0) + 1;
                 this.drawCards(player, 1);
                 this.log(`カードを1枚引きました！`);
             } else if (node.resource) {
@@ -2031,6 +2047,9 @@ class Game {
                     const choice = ['F', 'M', 'K'][Math.floor(Math.random() * 3)];
                     this.gainResource(player, choice, 1, node.name);
                 } else if (node.resource === 'Card') {
+                    console.log('[DEBUG] processNodeResource: Cardノード到着、drawCards呼び出し', { nodeId: node.id, player: player.name });
+                    // ボーナスドローとしてカウント（補充計算から除外される）
+                    player.bonusDrawsThisTurn = (player.bonusDrawsThisTurn || 0) + 1;
                     this.drawCards(player, 1);
                     this.log(`カードを1枚引きました！`);
                 } else {
@@ -2707,6 +2726,8 @@ class Game {
 
     // チェーンビルドアクションを表示（人間プレイヤー用）
     showChainBuildActions(player, chainRemaining) {
+        console.log('[DEBUG] showChainBuildActions: called', { chainRemaining, playerName: player.name, handLength: player.hand.length });
+
         // まずUIを更新して古いMove/Buildボタンを消す（selectedCardがnullなので消える）
         this.updateUI();
         // ハイライトとコールバックを確実にクリア
@@ -2721,6 +2742,7 @@ class Game {
         this.dynamicActions.appendChild(info);
 
         const buildableCards = player.hand.filter(c => this.canBuild(player, c).canBuild);
+        console.log('[DEBUG] showChainBuildActions: buildable cards', buildableCards.map(c => c.name_jp));
 
         if (buildableCards.length === 0) {
             const msg = document.createElement('div');
@@ -2736,6 +2758,7 @@ class Game {
                 btn.style.width = '100%';
                 btn.onclick = () => {
                     this.log(`${player.name} continues chain: Building ${card.name_jp}`);
+                    console.log('[DEBUG] showChainBuildActions onclick: chainRemaining before call =', chainRemaining, ', passing:', chainRemaining - 1);
                     this.executeBuild(player, card, chainRemaining - 1);
                 };
                 this.dynamicActions.appendChild(btn);
@@ -2798,11 +2821,13 @@ class Game {
      * 支払い処理（AIは即時、人間はモーダル）を経て建設を確定します
      * @param {Object} player 実行プレイヤー
      * @param {Object} card 建設対象カード
-     * @param {number} chainRemaining 残りのチェーン建設回数
+     * @param {number} chainRemaining 残りのチェーン建設回数 (-1 = 初回建設, 0以上 = チェーン継続)
      */
-    executeBuild(player, card, chainRemaining = 0) {
-        // 初回建設（チェーン継続でない）ならアクション済みチェック
-        if (chainRemaining === 0 && this.mainActionTaken) {
+    executeBuild(player, card, chainRemaining = -1) {
+        console.log('[DEBUG] executeBuild called: chainRemaining =', chainRemaining, ', mainActionTaken =', this.mainActionTaken);
+        // 初回建設（chainRemaining === -1）ならアクション済みチェック
+        // チェーン継続（chainRemaining >= 0）ならスキップ
+        if (chainRemaining === -1 && this.mainActionTaken) {
             console.warn("executeBuild: Action already taken this turn");
             return;
         }
@@ -2812,7 +2837,7 @@ class Game {
         this.highlightCallback = null; // 念のため明示的にnull
 
         // カードが手札にあるか確認（連打防止）
-        if (!card || (!player.hand.includes(card) && chainRemaining === 0)) {
+        if (!card || (!player.hand.includes(card) && chainRemaining === -1)) {
             console.warn("executeBuild: Card not in hand or null", card);
             return;
         }
@@ -2824,7 +2849,7 @@ class Game {
         }
 
         // 初回建設ならアクション済みフラグを立てる
-        if (chainRemaining === 0) {
+        if (chainRemaining === -1) {
             this.mainActionTaken = true;
         }
 
@@ -2877,10 +2902,14 @@ class Game {
         }
 
         // チェーンビルドの処理
-        let newChainRemaining = chainRemaining;
+        // chainRemaining === -1 は初回建設を示すため、0として扱う
+        let newChainRemaining = chainRemaining === -1 ? 0 : chainRemaining;
         if (card.chain_build) {
             newChainRemaining += card.chain_build;
+            console.log('[DEBUG] finalizeBuild: chain_build detected', { cardName: card.name_jp, chainBuild: card.chain_build, newChainRemaining });
         }
+
+        console.log('[DEBUG] finalizeBuild: Checking chain continuation', { newChainRemaining, handLength: player.hand.length, isAI: player.isAI });
 
         if (newChainRemaining > 0 && player.hand.length > 0) {
             this.log(`${player.name} は残り ${newChainRemaining} 回のチェーン建設が可能です。`);
@@ -2888,6 +2917,7 @@ class Game {
                 const delay = this.simulationMode ? this.simSpeed : 50;
                 setTimeout(() => this.executeAITurnChain(player, newChainRemaining), delay);
             } else {
+                console.log('[DEBUG] finalizeBuild: Calling showChainBuildActions');
                 this.showChainBuildActions(player, newChainRemaining);
             }
         } else {
@@ -3007,11 +3037,20 @@ class Game {
             if (c.draw_extra) drawExtra += c.draw_extra;
         });
         let limit = 3 + drawExtra;
-        let need = limit - player.hand.length;
+
+        // カードマス等からのボーナスドローは補充計算から除外
+        // (bonusDrawsThisTurn分を引いて計算し、その分多く引けるようにする)
+        const bonusDraws = player.bonusDrawsThisTurn || 0;
+        let effectiveHandSize = player.hand.length - bonusDraws;
+        let need = limit - effectiveHandSize;
+
         if (need > 0) {
             this.drawCards(player, need);
             this.log(`${player.name} はカードを ${need} 枚補充しました。`, true);
         }
+
+        // ボーナスドローカウントをリセット
+        player.bonusDrawsThisTurn = 0;
     }
 
     /**
