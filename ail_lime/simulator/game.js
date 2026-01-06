@@ -350,7 +350,8 @@ class Game {
 
             // --- ゲームプレイアクション ---
             case 'CARD_SELECTED':
-                // [共通] 対戦相手がカードを選択した（計画フェーズ）
+                // [共通] 対戦相手がカードを選択した（計画フェーズのみ）
+                if (this.phase !== 'plan') break; // 計画フェーズ以外では無視
                 if (data.playerId !== this.localPlayerId) {
                     const player = this.players[data.playerId];
                     if (player && player.hand[data.cardIndex]) {
@@ -358,7 +359,7 @@ class Game {
                         this.log(`${player.name} がカードを選択しました`);
                         this.updateUI();
                         // 全員選択完了ならフェーズ進行
-                        if (this.phase === 'plan' && this.players.every(p => p.selectedCard)) {
+                        if (this.players.every(p => p.selectedCard)) {
                             this.advancePhase();
                         }
                     }
