@@ -933,44 +933,6 @@ class Game {
     }
 
     /**
-     * フェーズ進行処理
-     * 計画フェーズから実行フェーズへの遷移などを管理します
-     */
-    advancePhase() {
-        if (this.phase === 'plan') {
-            // 1. AI全員にカードを選択させる
-            this.checkAIPlan();
-
-            // 2. 全員選択完了かチェック
-            const unselected = this.players.filter(p => p.selectedCard === null);
-            if (unselected.length > 0) {
-                // 未選択プレイヤーがいる場合
-                const names = unselected.map(p => p.name).join(', ');
-                if (unselected.some(p => !p.isAI)) {
-                    this.log("カードを選択してください", true);
-                } else {
-                    this.log(`Waiting for AI: ${names}`, true);
-                }
-                return;
-            }
-
-            // 3. 実行フェーズへ遷移
-            this.phase = 'execute';
-            this.currentPlayerIndex = this.startPlayerIndex;
-            this.turnsPlayedInRound = 0;
-
-            // 遷移中の複数クリック防止
-            if (this.nextPhaseBtn) this.nextPhaseBtn.disabled = true;
-            const quickBtn = document.getElementById('quick-confirm-btn');
-            if (quickBtn) quickBtn.disabled = true;
-
-            this.startExecuteTurn();
-        } else if (this.phase === 'execute') {
-            // executeフェーズ中の進行は startExecuteTurn 等で管理
-        }
-    }
-
-    /**
      * AI用: カード評価スコア計算
      * @param {Object} player 評価するAIプレイヤー
      * @param {Object} card 評価対象カード
