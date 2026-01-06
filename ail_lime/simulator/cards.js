@@ -170,66 +170,11 @@ const cardsData = [
         vp_logic: "none",
         vp: 0,
         draw_extra: 2,
-
-        // Rule says for #11 (this one? No #11 is next): "M+1" VP? 
-        // Wait, I need to check the row alignment in rule.md carefully.
-        // Row 111: | 政治 | F | M | 1 | 5 | 敵などいないアイル兵 | ... | 2 | | F1M2 | F | M+1 | | | 2 | |
-        // VP is "M+1"? No, that's "VP" column? No...
-        // Header: | 分野 | 主資源 | 副資源 | Lv | 枚数 | カード名(日) | カード名(原) | 移動数 | 移動時獲得資源 | コスト | 産出発動条件 | 産出 | VP | 変換 | ドロー追加 | 建設連鎖 |
-        // Row 111: "M+1" is under "VP"?
-        // Wait, "M+1" usually means Gain M+1 resource? Or VP is M+1? 
-        // My rule reading: "M+1" under VP column means getting 1 VP for something? Or maybe 1VP per M?
-        // Actually, looking at others: "K+1", "F+1". 
-        // Maybe it means "Provides 1 VP"?
-        // But for #104 (culture lv2): "K+2". And VP column says "3".
-        // Wait, let's re-read line 104 in rule.md.
-        // | 文化 | ... | 2 | 4 | 他国の書物 | ... | 2 | | K3 | K | K+2 | 3 | | | |
-        // Ah, "産出発動条件" (Production Condition) is "K" (Resource). "産出" (Production) is "K+2"? No.
-        // Column mapping:
-        // 1: 分野 (Category)
-        // 2: 主資源 (Main Res)
-        // 3: 副資源 (Sub Res)
-        // 4: Lv
-        // 5: 枚数 (Count)
-        // 6: Name JP
-        // 7: Name Original
-        // 8: Move
-        // 9: Move Res
-        // 10: Cost
-        // 11: Production Condition
-        // 12: Production
-        // 13: VP
-        // 14: Conversion
-        // 15: Draw Add
-        // 16: Build Chain
-
-        // Let's trace Row 111 (Politics Lv1 2nd card):
-        // | 政治 | F | M | 1 | 5 | 敵などいないアイル兵 | ... | 2 | | F1M2 | F | M+1 | | | 2 | |
-        // Cost: F1M2. Prod Condition: F. Production: M+1 (Gain 1 M?). VP: Empty. Conversion: Empty. Draw Add: 2? No, 2 is under "Draw Add"?
-        // Wait, let's count pipes.
-        // | 政治(1) | F(2) | M(3) | 1(4) | 5(5) | 敵などいないアイル兵(6) | zik...(7) | 2(8) | (9) | F1M2(10) | F(11) | M+1(12) | (13) | (14) | 2(15) | (16)?
-        // Wait, last column is empty?
-        // Let's check Row 102 (First card):
-        // | 文化 | K | F | 1 | 5 | 燐字の光 | ... | 1 | | K2 | K | K+1 | 1 | | | 1 |
-        // Col 11: K. Col 12: K+1. Col 13: 1 (VP). Col 16: 1 (Chain).
-        // It seems "Producton" is K+1?
-        // But Rule text says: "産出: 以下の2つの資源...". "効果: 産出など".
-        // Maybe "K+1" means "Gain 1 K"? Yes.
-
-        // Back to #110 (Politics Lv1 1st card):
-        // | ... | 法改正 | ... | 1 | | F2 | F | F+1 | 1 | | 1 | |
-        // Cost: F2. Prod Cond: F. Prod: F+1. VP: 1. Draw Add: 1. Chain: Empty.
-        //
-        // #111 (Politics Lv1 2nd card):
-        // | ... | 敵などいないアイル兵 | ... | 2 | | F1M2 | F | M+1 | | | 2 | |
-        // VP is empty. Draw Add is 2.
-
-        // So for #10 (my id):
         image_src: "../cards_new/cards_10 ページ.png"
     },
     {
         id: 11,
-        // Row 112
+
         name_jp: "アイル国民の力",
         name_original: "ail lata leti anpe",
         type: "politics",
@@ -246,7 +191,6 @@ const cardsData = [
     },
     {
         id: 12,
-        // Row 113
         name_jp: "10月8日",
         name_original: "ana leti lekka",
         type: "politics",
@@ -256,15 +200,7 @@ const cardsData = [
         move_resource: ["F"],
         cost: { F: 2, M: 2, W: 1 },
         production_condition: "F",
-        production: { K: "dynamic" }, // "K x 政治カード" is under VP??
-        // Row 113: | ... | F2M2W1 | F | K x政治カード | 1 | | | |
-        // Prod: F? No, "K x 政治 cards" is in Production column (12)??
-        // Let's check headers again.
-        // 11: 産出発動条件 (Condition)
-        // 12: 産出 (Production)
-        // 13: VP
-        // Row 113 (10月8日): Col 11: F. Col 12: K x 政治カード. Col 13: 1.
-        // So this card produces K based on politics cards count!
+        production: { K: "variable" },
         vp_logic: "static",
         vp: 1,
         production_logic: "variable",
@@ -274,7 +210,7 @@ const cardsData = [
     },
     {
         id: 13,
-        // Row 114
+
         name_jp: "投資",
         name_original: "amolit cu",
         type: "colorless",
@@ -289,7 +225,7 @@ const cardsData = [
     },
     {
         id: 14,
-        // Row 115
+
         name_jp: "旅",
         name_original: "xuwelic",
         type: "colorless",
@@ -305,7 +241,7 @@ const cardsData = [
     },
     {
         id: 15,
-        // Row 116
+
         name_jp: "良き文化",
         name_original: "pankaleti mo",
         type: "colorless",
@@ -321,7 +257,7 @@ const cardsData = [
     },
     {
         id: 16,
-        // Row 117
+
         name_jp: "古きを思い新しきに行く",
         name_original: "ticotit penulleti pi tude jo dutucunleti",
         type: "colorless",
@@ -337,17 +273,10 @@ const cardsData = [
     },
     {
         id: 17,
-        // Row 118
         name_jp: "筆兵無傾",
         name_original: "kuwa at elme",
         type: "colorless",
         level: null,
-        count: 1, // Rule says 2 copies! Row 118 col 5 says "2".
-        // Wait, my file list says "cards_17", "18", "19", "20".
-        // Row 118 is 17th item.
-        // Row 119 is 18th item.
-        // Row 120 is 19th item.
-        // Total types = 19.
         count: 2,
         move: 3,
         move_resource: ["K", "M", "F"],
@@ -359,7 +288,7 @@ const cardsData = [
     },
     {
         id: 18,
-        // Row 119
+
         name_jp: "アイルの道",
         name_original: "ail lime",
         type: "colorless",
@@ -375,7 +304,7 @@ const cardsData = [
     },
     {
         id: 19,
-        // Row 120
+
         name_jp: "アイル共和国憲法",
         name_original: "ail xep cepkulante",
         type: "colorless",

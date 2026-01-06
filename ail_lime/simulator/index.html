@@ -44,6 +44,8 @@
             
             <!-- P2P Host Info (hidden by default) -->
             <div id="p2p-host-section" class="setup-section" style="display: none; margin-top: 15px;">
+                <label>あなたの名前:</label>
+                <input type="text" id="player-name-host" placeholder="プレイヤー名" value="" style="width: 100%; padding: 8px; margin-top: 5px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 5px;">
                 <label>ルームID:</label>
                 <div id="room-id-display" style="font-family: monospace; font-size: 1.2em; padding: 10px; background: #e0e0e0; border-radius: 5px; margin-top: 5px;"></div>
                 <div id="p2p-waiting" style="margin-top: 10px; color: #666;">プレイヤーの参加を待っています...</div>
@@ -52,6 +54,8 @@
             
             <!-- P2P Guest Input (hidden by default) -->
             <div id="p2p-guest-section" class="setup-section" style="display: none; margin-top: 15px;">
+                <label>あなたの名前:</label>
+                <input type="text" id="player-name-guest" placeholder="プレイヤー名" value="" style="width: 100%; padding: 8px; margin-top: 5px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 5px;">
                 <label>ホストのルームIDを入力:</label>
                 <input type="text" id="room-id-input" placeholder="AIL-XXXXXX" style="width: 100%; padding: 10px; margin-top: 5px; font-family: monospace; font-size: 1.1em; border: 1px solid #ccc; border-radius: 5px;">
                 <button id="btn-connect-p2p" class="btn-secondary" style="margin-top: 10px; width: 100%;">接続</button>
@@ -65,6 +69,33 @@
             </div>
         </div>
     </div>
+
+    <!-- Action Prompt (Floating notification) -->
+    <div id="action-prompt" style="
+        display: none;
+        font-size: 1.2rem; 
+        font-weight: bold; 
+        color: white; 
+        background: linear-gradient(135deg, #3498db, #2980b9);
+        padding: 12px 24px; 
+        border-radius: 12px; 
+        text-align: center; 
+        position: fixed;
+        top: 80px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 1000;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        animation: pulse 2s infinite;
+        transition: all 0.3s ease;
+    "></div>
+    <style>
+        @keyframes pulse {
+            0% { box-shadow: 0 8px 25px rgba(0,0,0,0.3); }
+            50% { box-shadow: 0 8px 35px rgba(52, 152, 219, 0.6); }
+            100% { box-shadow: 0 8px 25px rgba(0,0,0,0.3); }
+        }
+    </style>
 
     <div id="game-container" style="display:none;">
         <!-- Header -->
@@ -138,6 +169,6 @@
     <script src="map_data.js"></script>
     <script src="cards.js"></script>
     <script src="network.js"></script>
-    <script src="game.js?v=20260106c"></script>
+    <script src="game.js?v=20260106w"></script>
 </body>
 </html>

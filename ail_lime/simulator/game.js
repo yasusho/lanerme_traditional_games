@@ -186,7 +186,8 @@ class Game {
                     try {
                         const roomId = await networkManager.initAsHost();
                         document.getElementById('room-id-display').textContent = roomId;
-                        document.getElementById('p2p-waiting').innerHTML = 'プレイヤーの参加を待っています... (接続: 0/' + (this.playerCount - 1) + ')';
+                        const neededPlayers = this.playerCount - 1; // 2人なら1人待ち
+                        document.getElementById('p2p-waiting').innerHTML = `プレイヤーの参加を待っています... (接続: 0/${neededPlayers})`;
                         document.getElementById('p2p-waiting').style.display = 'block';
                         document.getElementById('p2p-connected').style.display = 'none';
 
@@ -317,6 +318,24 @@ class Game {
                     networkManager.setLocalPlayerId(data.playerId);
                     console.log('[Game] Assigned Player ID:', data.playerId, 'Total:', data.totalPlayers);
                     this.log(`プレイヤー ${data.playerId + 1} としてゲームに参加します`);
+
+                    // ホストに自分の名前を送信
+                    const nameInput = document.getElementById('player-name-guest');
+                    const playerName = (nameInput && nameInput.value.trim()) || `Player ${data.playerId + 1}`;
+                    networkManager.broadcast({
+                        type: 'PLAYER_NAME',
+                        playerId: data.playerId,
+                        name: playerName
+                    });
+                }
+                break;
+
+            case 'PLAYER_NAME':
+                // [ホスト] ゲストから名前を受信
+                if (this.networkMode === 'host') {
+                    if (!this.pendingPlayerNames) this.pendingPlayerNames = {};
+                    this.pendingPlayerNames[data.playerId] = data.name;
+                    console.log('[Game] Received player name:', data.playerId, data.name);
                 }
                 break;
 
@@ -442,9 +461,11 @@ class Game {
 
                     if (data.cards && data.cards.length > 0) {
                         const myPlayer = this.players[this.localPlayerId];
-                        data.cards.forEach(c => myPlayer.hand.push(c));
-                        this.log(`カードを ${data.cards.length} 枚引きました。`, true);
-                        this.updateUI();
+                        if (myPlayer) {
+                            data.cards.forEach(c => myPlayer.hand.push(c));
+                            this.log(`カードを ${data.cards.length} 枚引きました。`, true);
+                            this.updateUI();
+                        }
                     }
                 }
                 break;
@@ -577,7 +598,7 @@ class Game {
             const isLocal = idx === this.localPlayerId;
             return {
                 ...pState,
-                name: `Player ${idx + 1} ${isLocal ? '(You)' : '(Remote)'}`,
+                name: isLocal ? pState.name : pState.name, // ホストから送られた名前を使用
                 color: colors[idx % colors.length],
                 hand: isLocal ? pState.hand : pState.hand.map((c, i) => ({
                     hidden: true,
@@ -746,15 +767,31 @@ class Game {
 
         // --- 2. プレイヤー生成と初期化 ---
         this.players = [];
-        const colors = ['white', 'blue', 'black', 'red', 'yellow'];
+        const colors = ['white', 'blue', 'black', 'red', 'yellow']; // トークン色
 
         if (this.isP2PMode()) {
             // [P2Pモード] ホスト・ゲスト対戦用設定
+            // プレイヤー名を入力フィールドから取得
+            const nameInput = this.networkMode === 'host'
+                ? document.getElementById('player-name-host')
+                : document.getElementById('player-name-guest');
+            const localPlayerName = (nameInput && nameInput.value.trim()) || `Player ${this.localPlayerId + 1}`;
+
             for (let i = 0; i < this.playerCount; i++) {
                 const isLocal = i === this.localPlayerId;
+                // ホストの場合、リモートプレイヤーの名前は pendingPlayerNames から取得
+                let playerName;
+                if (isLocal) {
+                    playerName = localPlayerName;
+                } else if (this.networkMode === 'host' && this.pendingPlayerNames && this.pendingPlayerNames[i]) {
+                    playerName = this.pendingPlayerNames[i];
+                } else {
+                    playerName = `Player ${i + 1}`;
+                }
+
                 this.players.push({
                     id: i,
-                    name: `Player ${i + 1} ${isLocal ? '(You)' : '(Remote)'}`,
+                    name: playerName,
                     color: colors[i % colors.length],
                     location: 1, // スタート地点: Node 01
                     hand: [],
@@ -768,7 +805,7 @@ class Game {
                     lastAction: null
                 });
             }
-            this.log(`あなたはプレイヤー ${this.localPlayerId + 1} (${colors[this.localPlayerId]}) です`);
+            this.log(`あなたはプレイヤー ${this.localPlayerId + 1} (${localPlayerName}) です`);
         } else {
             // [ローカルモード] AI対戦またはシミュレーション
             const humanIndex = this.simulationMode ? -1 : Math.floor(Math.random() * this.playerCount);
@@ -1256,139 +1293,47 @@ class Game {
         }
     }
 
-    /**
-     * メインUI更新処理
-     * プレイヤーの手札、構築物、ターン状態などを再描画します
-     */
+
     updateUI() {
-        if (!this.humanArea || !this.opponentsArea) return;
-        this.humanArea.innerHTML = '';
-        this.opponentsArea.innerHTML = '';
+        // アクションプロンプトを更新（常に実行）
+        const actionPrompt = document.getElementById('action-prompt');
+        console.log('[UI] actionPrompt:', !!actionPrompt, 'players:', this.players.length, 'phase:', this.phase);
+        if (actionPrompt && this.players.length > 0) {
+            const localPlayer = this.players.find(p => this.isLocalPlayer(p));
+            const isMyTurn = localPlayer && this.currentPlayerIndex === localPlayer.id;
+            console.log('[UI] localPlayer:', !!localPlayer, 'isMyTurn:', isMyTurn);
 
-        this.players.forEach((p, idx) => {
-            const isLocal = this.isLocalPlayer(p);
-            const container = isLocal ? this.humanArea : this.opponentsArea;
-            const div = document.createElement('div');
-
-            // アクティブプレイヤーの強調表示
-            if (isLocal) {
-                div.className = `human-board ${idx === this.currentPlayerIndex && this.phase === 'execute' ? 'active-human' : ''}`;
-                div.style.borderLeft = `5px solid ${p.color}`;
-            } else {
-                div.className = `opponent-board ${idx === this.currentPlayerIndex && this.phase === 'execute' ? 'active-opponent' : ''}`;
-                div.style.borderTop = `5px solid ${p.color}`;
-            }
-
-            // プレイヤー情報ヘッダー (Resources, VP etc.)
-            // ※ infoBlock変数はこのスコープ外で定義されているか、コード修正で補完が必要かも
-            // 本来のコードでは infoBlock 生成ロジックがあったはずですが、前回のview_fileでは省略されていました。
-            // ここでは元のコードフローを壊さないように、省略された部分には触れず、
-            // 手札描画ループ部分のコメントを強化します。
-
-            // --- 情報ブロック生成 (既存コード依存) ---
-            const infoBlock = this._generatePlayerInfoHTML(p); // 仮のメソッド呼び出し表現（実際は直書きされていることが多い）
-
-            let handHtml = '';
-            p.hand.filter(c => c).forEach((card, cIdx) => {
-                const isSel = (p.selectedCard === card);
-                let cardActionHtml = '';
-
-                if (isLocal && isSel) {
-                    // --- アクションポップオーバーの生成 ---
-                    // 実行フェーズ: 移動/建設ボタンを表示
-                    if (this.phase === 'execute') {
-                        if (idx === this.currentPlayerIndex) {
-                            // 自分の手番: アクションボタン有効
-                            const { canBuild } = this.canBuild(p, card);
-                            const moveResDisplay = card.move_resource && card.move_resource.length > 0 ? card.move_resource.join('/') : '-';
-                            cardActionHtml = `
-                <div class="card-actions-popover" style="margin-bottom:5px; padding:5px; background:#f0f8ff; border:2px solid #bdd7ee; border-radius:8px; width:200px; text-align:center; position:absolute; bottom:100%; left:50%; transform:translateX(-50%); z-index:50; box-shadow:0 4px 10px rgba(0,0,0,0.2);">
-                    <div style="font-size:0.8rem; margin-bottom:3px; font-weight:bold;">${card.name_jp}</div>
-                    <div style="font-size:0.7rem; margin-bottom:5px;">移動:${card.move} 資源:${moveResDisplay} / コスト:${this.formatCost(card.cost)}</div>
-                    <div style="display:flex; gap:3px;">
-                        <button class="btn-primary" style="font-size:0.8rem; padding:3px 8px; flex:1;" onclick="event.stopPropagation(); window.game.executeMove(window.game.players[${idx}], window.game.players[${idx}].hand[${cIdx}])">
-                            進む
-                        </button>
-                        <button class="btn-secondary" style="font-size:0.8rem; padding:3px 8px; flex:1;" ${!canBuild ? 'disabled' : ''} onclick="event.stopPropagation(); window.game.executeBuild(window.game.players[${idx}], window.game.players[${idx}].hand[${cIdx}])">
-                            建てる
-                        </button>
-                    </div>
-                    <div style="position:absolute; bottom:-6px; left:50%; margin-left:-6px; border-width:6px; border-style:solid; border-color:#bdd7ee transparent transparent transparent;"></div>
-                </div>
-            `;
-                        } else {
-                            // 他人の手番: 待機メッセージ
-                            cardActionHtml = `
-                <div class="card-actions-popover" style="margin-bottom:5px; padding:5px; background:#fff0f5; border:2px solid #ffb6c1; border-radius:8px; width:140px; text-align:center; position:absolute; bottom:100%; left:50%; transform:translateX(-50%); z-index:50;">
-                    <div style="font-size:0.7rem;">他プレイヤーの手番待ち...</div>
-                    <div style="position:absolute; bottom:-6px; left:50%; margin-left:-6px; border-width:6px; border-style:solid; border-color:#ffb6c1 transparent transparent transparent;"></div>
-                </div>
-            `;
-                        }
-                    } else if (this.phase === 'plan') {
-                        // 計画フェーズ: 選択中表示
-                        cardActionHtml = `
-            <div class="card-actions-popover" style="margin-bottom:5px; padding:5px; background:#e6e6fa; border:2px solid #d8bfd8; border-radius:8px; width:120px; text-align:center; position:absolute; bottom:100%; left:50%; transform:translateX(-50%); z-index:50;">
-                <div style="font-size:0.7rem;">選択中</div>
-                <div style="position:absolute; bottom:-6px; left:50%; margin-left:-6px; border-width:6px; border-style:solid; border-color:#d8bfd8 transparent transparent transparent;"></div>
-            </div>
-        `;
-                    }
-                }
-
-                // --- カード描画 ---
-                // P2Pモードでは相手のカード、隠しカードは裏面表示
-                if (!isLocal || card.hidden) {
-                    handHtml += `<div style="position:relative; margin:0 2px;"><img src="${cardBackImage}" class="card-preview" style="${isSel ? 'border:2px solid red;' : ''}"></div>`;
+            if (this.phase === 'plan') {
+                if (localPlayer && !localPlayer.selectedCard) {
+                    actionPrompt.textContent = '🃏 カードを選択してください';
+                    actionPrompt.style.color = '#3498db';
                 } else {
-                    handHtml += `
-        <div style="position:relative; display:flex; flex-direction:column; align-items:center; margin:0 2px;">
-            ${cardActionHtml}
-            <img src="${card.image_src}" class="card-preview ${isSel ? 'selected-card' : ''}" 
-                 onclick="window.game.selectCardForPlan(window.game.players[${idx}], ${cIdx})"
-                 style="cursor:pointer; transition: transform 0.2s;">
-        </div>
-    `;
+                    actionPrompt.textContent = '⏳ 他のプレイヤーの選択を待っています...';
+                    actionPrompt.style.color = '#95a5a6';
                 }
-            });
+            } else if (this.phase === 'execute') {
+                if (isMyTurn) {
+                    if (this.awaitingMoveTarget) {
+                        actionPrompt.textContent = '📍 移動先を選択してください';
+                        actionPrompt.style.color = '#e67e22';
+                    } else if (localPlayer && localPlayer.selectedCard) {
+                        actionPrompt.textContent = '⚡ アクションを選択してください（進む／建てる）';
+                        actionPrompt.style.color = '#27ae60';
+                    } else {
+                        actionPrompt.textContent = '🎯 あなたの手番です';
+                        actionPrompt.style.color = '#27ae60';
+                    }
+                } else {
+                    const currentPlayer = this.players[this.currentPlayerIndex];
+                    const name = currentPlayer ? currentPlayer.name : 'Player';
+                    actionPrompt.textContent = `⏳ ${name} の手番です...`;
+                    actionPrompt.style.color = '#95a5a6';
+                }
+            } else {
+                actionPrompt.textContent = '';
+            }
+        }
 
-            const handBlock = `
-<div class="hand-area" style="display:flex; flex-direction:row; align-items:flex-end; padding-top:60px; overflow-x:visible;">
-    ${handHtml}
-</div>
-            `;
-
-            // --- 構築済みカード（タブロー） ---
-            const tableauBlock = `
-<div class="tableau">
-    <div style="font-size: 0.9em; margin-bottom: 5px;" class="tableau-label">${isLocal ? 'Tableau' : 'Built'}:</div>
-    <div class="tableau-cards">
-        ${p.construction.filter(c => c).map(c => `<img src="${c.image_src}" class="card-thumb" title="${c.name_jp}">`).join('')}
-    </div>
-</div>
-            `;
-
-            // 最終的なHTML組立
-            // infoBlockが必要だが、元のコードにはあったはず。
-            // ここで私が _generatePlayerInfoHTML と書いてしまったので、元のHTML生成コードを復元しないと壊れる。
-            // 前のコードを読むと、infoBlockは書かれていなかった（省略されていた）。
-            // したがって、infoBlock変数が存在しない状態で replaceするとエラーになる。
-            // 
-            // 解決策: updateUI全体を置き換えず、selectCardForPlanだけ置き換えるか、
-            // updateUIの中身を推測して書く必要がある。
-            // view_fileで見た範囲 (1243-1342) には infoBlock の生成コードがない！
-            // " // ... （省略） ... " の部分 (1241行目) にあったのかも？
-            // 
-            // 危険なので updateUI の置換は中止し、selectCardForPlan のみにします。
-
-            div.innerHTML = "<div>Error: infoBlock missing</div>" + handBlock + tableauBlock; // これはまずい
-            container.appendChild(div);
-        });
-    }
-
-    // ... （省略） ...
-
-    updateUI() {
         if (!this.humanArea || !this.opponentsArea) return; // 安全チェック
         this.humanArea.innerHTML = '';
         this.opponentsArea.innerHTML = '';
@@ -1399,12 +1344,24 @@ class Game {
             const container = isLocal ? this.humanArea : this.opponentsArea;
             const div = document.createElement('div');
 
+            // プレイヤー色に対応する背景色マップ
+            const bgColors = {
+                'white': 'rgba(255, 255, 255, 0.9)',
+                'blue': 'rgba(52, 152, 219, 0.2)',
+                'black': 'rgba(40, 40, 40, 0.15)',
+                'red': 'rgba(231, 76, 60, 0.15)',
+                'yellow': 'rgba(241, 196, 15, 0.25)'
+            };
+            const bgColor = bgColors[p.color] || 'rgba(255, 255, 255, 0.9)';
+
             if (isLocal) {
                 div.className = `human-board ${idx === this.currentPlayerIndex && this.phase === 'execute' ? 'active-human' : ''}`;
                 div.style.borderLeft = `5px solid ${p.color}`;
+                div.style.backgroundColor = bgColor;
             } else {
                 div.className = `opponent-board ${idx === this.currentPlayerIndex && this.phase === 'execute' ? 'active-opponent' : ''}`;
                 div.style.borderTop = `5px solid ${p.color}`;
+                div.style.backgroundColor = bgColor;
             }
 
             let handHtml = '';
@@ -1792,80 +1749,6 @@ class Game {
         passengers.forEach(p => p.location = targetId);
     }
 
-    finishMove(player, targetNodeId, card) {
-        // プレイヤーの位置を更新
-        player.location = targetNodeId;
-
-        // ノードデータを取得
-        const node = mapNodes.find(n => n.id === targetNodeId);
-
-        // 1. カード移動資源
-        if (card && card.move_resource && card.move_resource.length > 0) {
-            card.move_resource.forEach(r => {
-                this.gainResource(player, r, 1, 'card_move');
-            });
-        }
-
-        // 2. マス資源
-        if (node) {
-            if (node.resource === 'FMK') {
-                // プレイヤーに選ばせる - AIはランダム選択
-                if (player.isAI) {
-                    const choice = ['F', 'M', 'K'][Math.floor(Math.random() * 3)];
-                    this.gainResource(player, choice, 1, 'node');
-                } else {
-                    // 人間 - 簡略化: 今はランダム選択（UIを表示すべき）
-                    const choice = ['F', 'M', 'K'][Math.floor(Math.random() * 3)];
-                    this.gainResource(player, choice, 1, 'node');
-                    this.log(`ペデ到着！${choice}を獲得！`);
-                }
-            } else if (node.resource === 'Card') {
-                console.log('[DEBUG] finishMove: Cardノード到着、drawCards呼び出し', { nodeId: node.id, player: player.name });
-                // ボーナスドローとしてカウント（補充計算から除外される）
-                player.bonusDrawsThisTurn = (player.bonusDrawsThisTurn || 0) + 1;
-                this.drawCards(player, 1);
-                this.log(`カードを1枚引きました！`);
-            } else if (node.resource) {
-                this.gainResource(player, node.resource, 1, 'node');
-            }
-        }
-
-        // 3. トリガー産出（F/M/Kマスの場合）
-        if (node && ['F', 'M', 'K'].includes(node.resource)) {
-            player.construction.forEach(c => {
-                if (c.production_condition === node.resource && c.production) {
-                    for (let r in c.production) {
-                        const val = c.production[r];
-                        if (typeof val === 'number') {
-                            this.gainResource(player, r, val, 'production');
-                            this.log(`${c.name_jp}が${r}を${val}個産出！`);
-                        } else if (val === 'variable' && c.production_formula) {
-                            let count = 0;
-                            if (c.production_formula.includes('culture_cards')) {
-                                count = player.construction.filter(x => x.type === 'culture').length;
-                            } else if (c.production_formula.includes('industry_cards')) {
-                                count = player.construction.filter(x => x.type === 'industry').length;
-                            } else if (c.production_formula.includes('politics_cards')) {
-                                count = player.construction.filter(x => x.type === 'politics').length;
-                            }
-                            if (count > 0) {
-                                this.gainResource(player, r, count, 'production');
-                                this.log(`${c.name_jp}が${r}を${count}個産出！`);
-                            }
-                        }
-                    }
-                }
-            });
-        }
-
-        // このターンの変換フラグをリセット
-        player.construction.forEach(c => c.usedThisTurn = false);
-
-        // UIを更新してターン終了
-        this.updateUI();
-        this.renderMap();
-        this.endTurn();
-    }
 
     showExecutionActions(player) {
         this.dynamicActions.innerHTML = '';
@@ -2553,8 +2436,16 @@ class Game {
         resInfo.innerHTML = `<strong>所持資源:</strong> <span style="color:#f39c12">F:${player.resources.F || 0}</span> <span style="color:#e74c3c">M:${player.resources.M || 0}</span> <span style="color:#3498db">K:${player.resources.K || 0}</span> <span style="color:#95a5a6">W:${player.resources.W || 0}</span>`;
         content.appendChild(resInfo);
 
-        // 支払い選択UI
-        const paymentState = { F: 0, M: 0, K: 0, W_as_F: 0, W_as_M: 0, W_as_K: 0 };
+        // 支払い選択UI - 推奨支払い方法を初期値として設定
+        const recommendedPlan = this.calculatePaymentPlan(player, cost);
+        const paymentState = {
+            F: recommendedPlan.F || 0,
+            M: recommendedPlan.M || 0,
+            K: recommendedPlan.K || 0,
+            W_as_F: recommendedPlan.W_as_F || 0,
+            W_as_M: recommendedPlan.W_as_M || 0,
+            W_as_K: recommendedPlan.W_as_K || 0
+        };
 
         const updatePaymentUI = () => {
             selectorsDiv.querySelectorAll('.pay-count').forEach(span => {
@@ -2624,16 +2515,22 @@ class Game {
             btn.onclick = () => {
                 const res = btn.dataset.res;
                 const isWild = res.startsWith('W_as_');
-                const baseRes = isWild ? res : res;
-                const maxAvail = isWild ? (player.resources.W || 0) : (player.resources[res] || 0);
-                const currentTotal = isWild
-                    ? (paymentState.W_as_F || 0) + (paymentState.W_as_M || 0) + (paymentState.W_as_K || 0)
-                    : paymentState[res];
-                const maxForThis = isWild ? maxAvail - (currentTotal - (paymentState[res] || 0)) : maxAvail;
 
-                if ((paymentState[res] || 0) < maxForThis) {
-                    paymentState[res] = (paymentState[res] || 0) + 1;
-                    updatePaymentUI();
+                if (isWild) {
+                    // W代替の場合: 使用済みWを計算して残りWが上限
+                    const usedW = (paymentState.W_as_F || 0) + (paymentState.W_as_M || 0) + (paymentState.W_as_K || 0);
+                    const availW = player.resources.W || 0;
+                    if (usedW < availW) {
+                        paymentState[res] = (paymentState[res] || 0) + 1;
+                        updatePaymentUI();
+                    }
+                } else {
+                    // 直接支払いの場合: 所持資源が上限
+                    const owned = player.resources[res] || 0;
+                    if ((paymentState[res] || 0) < owned) {
+                        paymentState[res] = (paymentState[res] || 0) + 1;
+                        updatePaymentUI();
+                    }
                 }
             };
         });
@@ -2750,19 +2647,74 @@ class Game {
             msg.style.color = '#999';
             this.dynamicActions.appendChild(msg);
         } else {
+            // カード画像付きのグリッド表示
+            const cardGrid = document.createElement('div');
+            cardGrid.style.display = 'grid';
+            cardGrid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(100px, 1fr))';
+            cardGrid.style.gap = '8px';
+            cardGrid.style.maxHeight = '200px';
+            cardGrid.style.overflowY = 'auto';
+            cardGrid.style.padding = '5px';
+
             buildableCards.forEach(card => {
-                const btn = document.createElement('button');
-                btn.textContent = `${card.name_jp} (${this.formatCost(card.cost)})`;
-                btn.style.display = 'block';
-                btn.style.marginTop = '5px';
-                btn.style.width = '100%';
-                btn.onclick = () => {
+                const cardBtn = document.createElement('div');
+                cardBtn.className = 'chain-card-btn';
+                cardBtn.style.cursor = 'pointer';
+                cardBtn.style.border = '2px solid #ccc';
+                cardBtn.style.borderRadius = '8px';
+                cardBtn.style.padding = '5px';
+                cardBtn.style.textAlign = 'center';
+                cardBtn.style.background = 'var(--glass-bg, rgba(255,255,255,0.1))';
+                cardBtn.style.transition = 'transform 0.1s, border-color 0.1s';
+
+                // カード画像
+                const img = document.createElement('img');
+                img.src = `../cards/${card.id}.png`;
+                img.alt = card.name_jp;
+                img.style.width = '80px';
+                img.style.height = 'auto';
+                img.style.borderRadius = '4px';
+                img.onerror = () => { img.style.display = 'none'; };
+
+                // カード名
+                const name = document.createElement('div');
+                name.textContent = card.name_jp;
+                name.style.fontSize = '0.75rem';
+                name.style.marginTop = '4px';
+                name.style.whiteSpace = 'nowrap';
+                name.style.overflow = 'hidden';
+                name.style.textOverflow = 'ellipsis';
+
+                // コスト表示
+                const cost = document.createElement('div');
+                cost.textContent = this.formatCost(card.cost);
+                cost.style.fontSize = '0.65rem';
+                cost.style.color = '#888';
+
+                cardBtn.appendChild(img);
+                cardBtn.appendChild(name);
+                cardBtn.appendChild(cost);
+
+                // ホバー効果
+                cardBtn.onmouseenter = () => {
+                    cardBtn.style.transform = 'scale(1.05)';
+                    cardBtn.style.borderColor = 'var(--accent-color, #4CAF50)';
+                };
+                cardBtn.onmouseleave = () => {
+                    cardBtn.style.transform = 'scale(1)';
+                    cardBtn.style.borderColor = '#ccc';
+                };
+
+                cardBtn.onclick = () => {
                     this.log(`${player.name} continues chain: Building ${card.name_jp}`);
                     console.log('[DEBUG] showChainBuildActions onclick: chainRemaining before call =', chainRemaining, ', passing:', chainRemaining - 1);
                     this.executeBuild(player, card, chainRemaining - 1);
                 };
-                this.dynamicActions.appendChild(btn);
+
+                cardGrid.appendChild(cardBtn);
             });
+
+            this.dynamicActions.appendChild(cardGrid);
         }
 
         const btnSkip = document.createElement('button');
@@ -3277,13 +3229,12 @@ class Game {
     }
 
 
-    // VP計算用のフォーミュラテーブル（データ駆動）
+    // VP計算用のフォーミュラテーブル（vp_logic: 'variable' のカード用）
     static VP_FORMULAS = {
-        4: (p, c) => (p.resources.M || 0) * c.culture,   // 文化Lv3: M × 文化数
-        8: (p, c) => (p.resources.F || 0) * c.industry,  // 産業Lv3: F × 産業数
-        15: (p, c) => c.culture,                           // 良き文化: 1 × 文化数
-        16: (p, c) => c.industry,                          // 古きを思い: 1 × 産業数
-        17: (p, c) => c.politics                           // 政治: 1 × 政治数
+        // カード4,8はvp_logic:'static'のため除外（静的VP: 4=2VP, 8=1VP）
+        15: (p, c) => c.culture,     // 良き文化: 1 × 文化数
+        16: (p, c) => c.industry,    // 古きを思い: 1 × 産業数
+        17: (p, c) => c.politics     // 筆兵無傾: 1 × 政治数
     };
 
     // 周回トークンVPテーブル（インデックス = トークン数）
@@ -3519,6 +3470,47 @@ class Game {
      * プレイヤーの手札、ボード、リソース、フェーズ表示などを再描画します
      */
     updateUI() {
+        // アクションプロンプトを更新（常に実行）
+        const actionPrompt = document.getElementById('action-prompt');
+        if (actionPrompt && this.players.length > 0) {
+            const localPlayer = this.players.find(p => this.isLocalPlayer(p));
+            const isMyTurn = localPlayer && this.currentPlayerIndex === localPlayer.id;
+
+            if (this.phase === 'plan') {
+                if (localPlayer && !localPlayer.selectedCard) {
+                    actionPrompt.textContent = '🃏 カードを選択してください';
+                    actionPrompt.style.background = 'linear-gradient(135deg, #3498db, #2980b9)';
+                } else {
+                    actionPrompt.textContent = '⏳ 他のプレイヤーの選択を待っています...';
+                    actionPrompt.style.background = 'linear-gradient(135deg, #95a5a6, #7f8c8d)';
+                }
+            } else if (this.phase === 'execute') {
+                if (isMyTurn) {
+                    if (this.awaitingMoveTarget) {
+                        actionPrompt.textContent = '📍 移動先を選択してください';
+                        actionPrompt.style.background = 'linear-gradient(135deg, #e67e22, #d35400)';
+                    } else if (localPlayer && localPlayer.selectedCard) {
+                        actionPrompt.textContent = '⚡ アクションを選択してください（進む／建てる）';
+                        actionPrompt.style.background = 'linear-gradient(135deg, #27ae60, #1e8449)';
+                    } else {
+                        actionPrompt.textContent = '🎯 あなたの手番です';
+                        actionPrompt.style.background = 'linear-gradient(135deg, #27ae60, #1e8449)';
+                    }
+                } else {
+                    const currentPlayer = this.players[this.currentPlayerIndex];
+                    const name = currentPlayer ? currentPlayer.name : 'Player';
+                    actionPrompt.textContent = `⏳ ${name} の手番です...`;
+                    actionPrompt.style.background = 'linear-gradient(135deg, #95a5a6, #7f8c8d)';
+                }
+            } else {
+                actionPrompt.style.display = 'none';
+            }
+            // 表示を確保
+            if (this.phase === 'plan' || this.phase === 'execute') {
+                actionPrompt.style.display = 'block';
+            }
+        }
+
         if (!this.humanArea || !this.opponentsArea) return; // 安全チェック
         this.humanArea.innerHTML = '';
         this.opponentsArea.innerHTML = '';
@@ -3536,6 +3528,14 @@ class Game {
                 div.className = `opponent-board ${idx === this.currentPlayerIndex && this.phase === 'execute' ? 'active-opponent' : ''}`;
                 div.style.borderTop = `5px solid ${p.color}`;
             }
+
+            // 手札上限を先に計算（infoBlockで使用）
+            let drawExtra = 0;
+            const validCardsForLimit = p.construction.filter(c => c);
+            validCardsForLimit.forEach(c => {
+                if (c.draw_extra) drawExtra += c.draw_extra;
+            });
+            const handLimit = 3 + drawExtra;
 
             let handHtml = '';
             p.hand.filter(c => c).forEach((card, cIdx) => {
@@ -3585,8 +3585,18 @@ class Game {
                 }
             }
 
+            // プレイヤー色に対応する背景色マップ（infoBlock用）
+            const infoBgColors = {
+                'white': 'rgba(255, 255, 255, 0.9)',
+                'blue': 'rgba(52, 152, 219, 0.2)',
+                'black': 'rgba(100, 100, 100, 0.15)',
+                'red': 'rgba(231, 76, 60, 0.15)',
+                'yellow': 'rgba(241, 196, 15, 0.25)'
+            };
+            const infoBgColor = infoBgColors[p.color] || 'rgba(255, 255, 255, 0.9)';
+
             const infoBlock = `
-<div class="player-info">
+<div class="player-info" style="background: ${infoBgColor};">
     <div class="player-name">
         <span>${p.name} ${this.startPlayerIndex === idx ? '★' : ''}</span>
         <span style="font-size: 0.8rem; opacity: 0.8;">VP: ${this.calculateVP(p)}</span>
@@ -3597,6 +3607,7 @@ class Game {
         <span class="res-tag k" title="K-Culture">K: ${p.resources.K}</span>
         <span class="res-tag w" title="Wild">W: ${p.resources.W}</span>
         <span class="res-tag rt" title="Round Tokens">RT: ${p.roundTokens || 0}</span>
+        <span style="background:#eee; padding:2px 8px; border-radius:6px; font-size:0.8rem; margin-left:auto;" title="Hand Limit">🃏 ${handLimit}</span>
     </div>
     ${infoActionsHtml}
 </div>
@@ -3608,54 +3619,11 @@ class Game {
 </div>
             `;
 
-            // 手札上限を計算
-            let drawExtra = 0;
-            const validCards = p.construction.filter(c => c);
 
-            validCards.forEach(c => {
-                if (c.draw_extra) drawExtra += c.draw_extra;
-            });
-            const handLimit = 3 + drawExtra;
-
-            // タブローの力を計算（合計潜在産出）
-            const power = { F: 0, M: 0, K: 0, W: 0 };
-            const counts = {
-                culture: validCards.filter(c => c.type === 'culture').length,
-                industry: validCards.filter(c => c.type === 'industry').length,
-                politics: validCards.filter(c => c.type === 'politics').length
-            };
-            // 削除: 憲法ブースト（VPのみに）
-
-            validCards.forEach(c => {
-                if (c.production) {
-                    if (c.production_logic === 'variable') {
-                        let amt = 0;
-                        if (c.id === 12 || c.production_formula.includes('politics')) amt = counts.politics;
-                        else if (c.production_formula.includes('culture')) amt = counts.culture;
-                        else if (c.production_formula.includes('industry')) amt = counts.industry;
-
-                        const res = c.production_resource || 'W';
-                        power[res] = (power[res] || 0) + amt;
-                    } else {
-                        for (let r in c.production) {
-                            power[r] = (power[r] || 0) + c.production[r];
-                        }
-                    }
-                }
-            });
-
-            const powerStr =
-                `<span class="res-tag f" style="padding:2px 6px; font-size:0.8em;">F:${power.F}</span> ` +
-                `<span class="res-tag m" style="padding:2px 6px; font-size:0.8em;">M:${power.M}</span> ` +
-                `<span class="res-tag k" style="padding:2px 6px; font-size:0.8em;">K:${power.K}</span>` +
-                (power.W ? ` <span class="res-tag w" style="padding:2px 6px; font-size:0.8em;">W:${power.W}</span>` : '');
 
             const tableauBlock = `
 <div class="tableau">
-    <div style="font-size: 0.85em; margin-bottom: 5px; display:flex; justify-content:space-between; align-items:center; background:#eee; padding:4px 8px; border-radius:4px;" class="tableau-label">
-        <span><strong>Limit:</strong> ${handLimit}</span>
-        <span title="Total Production Power" style="display:flex; gap:3px;"><strong>Prod:</strong> ${powerStr}</span>
-    </div>
+    <div style="font-size: 0.85em; margin-bottom: 3px;" class="tableau-label">建設済み:</div>
     <div class="tableau-cards">
         ${p.construction.filter(c => c).map(c => {
                 // 産出バッジはユーザーの要求で削除
