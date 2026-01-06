@@ -439,6 +439,19 @@ class Game {
                 if (this.nextPhaseBtn) this.nextPhaseBtn.disabled = false;
                 break;
 
+            case 'PHASE_CHANGE':
+                // [ゲスト] ホストからのフェーズ変更通知
+                this.phase = data.phase;
+                this.currentPlayerIndex = data.currentPlayerIndex;
+                this.turnsPlayedInRound = data.turnsPlayedInRound || 0;
+                this.log(`フェーズ変更: ${data.phase}`);
+                this.updateUI();
+                // 自分の手番ならUIを更新
+                if (this.phase === 'execute') {
+                    this.startExecuteTurn();
+                }
+                break;
+
             case 'REQUEST_DRAW':
                 // [ホスト] ゲストからのドロー要求を処理
                 if (this.networkMode === 'host') {
@@ -1214,11 +1227,22 @@ class Game {
             }
             this.phase = 'execute';
             this.currentPlayerIndex = this.startPlayerIndex;
+            this.turnsPlayedInRound = 0; // ターンカウントリセット
 
             // 遷移中の複数クリック防止のため即座にボタン無効化
             if (this.nextPhaseBtn) this.nextPhaseBtn.disabled = true;
             const quickBtn = document.getElementById('quick-confirm-btn');
             if (quickBtn) quickBtn.disabled = true;
+
+            // [P2P] フェーズ変更をゲストに通知
+            if (this.isP2PMode() && this.networkMode === 'host') {
+                networkManager.broadcast({
+                    type: 'PHASE_CHANGE',
+                    phase: this.phase,
+                    currentPlayerIndex: this.currentPlayerIndex,
+                    turnsPlayedInRound: this.turnsPlayedInRound
+                });
+            }
 
             this.startExecuteTurn();
         } else if (this.phase === 'execute') {
