@@ -22,15 +22,13 @@
 
     /* Resource Colors - User Specified */
     --color-f: #f1c40f;
-    /* Fuel - Yellow */
+    /* Food - Yellow */
     --color-m: #e74c3c;
     /* Material - Red */
     --color-k: #3498db;
-    /* K (Culture) - Blue */
-    --color-w: #cbd5e0;
-    /* Wild - White */
-    --color-rt: #2ecc71;
-    /* Round Token - Green */
+    /* Knowledge - Blue */
+    --color-w: #22c55e;
+    /* Wild/Round Token - Green */
 }
 
 body {
@@ -446,11 +444,6 @@ h1 {
 
 .res-tag.w {
     background-color: var(--color-w);
-    color: #744210;
-}
-
-.res-tag.rt {
-    background-color: var(--color-rt);
 }
 
 .token {

@@ -20,6 +20,13 @@ let totalRounds = 0;
 
 const cardStats = {};
 const startPlayerStats = {}; // Tracks wins by initial player/turn order (Seat 1-4)
+const nodeStrengthStats = {};
+
+const nodeNames = {
+    1: "マカティ", 2: "クワケ", 3: "クケカ", 4: "イッキャウ", 5: "タウポ",
+    6: "シェプ・オキヤウ", 7: "パシルシャリヤ", 8: "クティヤ", 9: "ナナラ", 10: "イヌシ",
+    11: "スプケベス", 12: "アタラム", 13: "アイキト", 14: "ペデ"
+};
 
 results.forEach(game => {
     totalRounds += game.totalRounds;
@@ -65,13 +72,25 @@ results.forEach(game => {
                 minVP: Infinity,
                 maxVP: -Infinity,
                 handSize: 0,
-                construction: 0
+                construction: 0,
+                totalW: 0,
+                totalWVP: 0
             };
         }
 
         const s = strategyStats[strat];
         s.games++;
         s.totalVP += p.vp;
+        s.totalW += (p.roundTokens || 0);
+
+        // Calculate W VP (Simplified reproduction of game logic)
+        const rt = p.roundTokens || 0;
+        let wVP = 0;
+        if (rt === 1) wVP = 1;
+        else if (rt === 2) wVP = 2;
+        else if (rt > 2) wVP = (rt - 1) * 2;
+
+        s.totalWVP += wVP;
         if (p.vp < s.minVP) s.minVP = p.vp;
         if (p.vp > s.maxVP) s.maxVP = p.vp;
         s.handSize += p.handSize || 0;
@@ -79,6 +98,19 @@ results.forEach(game => {
 
         if (p.vp === maxVP) s.wins++;
     });
+
+    // Node Stats Analysis
+    if (game.nodeStats) {
+        for (const [id, s] of Object.entries(game.nodeStats)) {
+            if (!nodeStrengthStats[id]) {
+                nodeStrengthStats[id] = { visits: 0, resGained: 0, prodGained: 0, cardsGained: 0 };
+            }
+            nodeStrengthStats[id].visits += s.visits;
+            nodeStrengthStats[id].resGained += s.resGained;
+            nodeStrengthStats[id].prodGained += s.prodGained;
+            nodeStrengthStats[id].cardsGained += s.cardsGained;
+        }
+    }
 });
 // Output
 console.log("\n=== Turn Order Advantage (Seat Position) ===");
@@ -116,12 +148,14 @@ console.log(`Average Rounds: ${(totalRounds / results.length).toFixed(2)}`);
 
 console.log("\n=== Strategy Performance ===");
 // Table header
-console.log(`| Strategy | Win Rate | Avg VP | Min/Max | Avg Built |`);
-console.log(`|---|---|---|---|---|`);
+console.log(`| Strategy | Win Rate | Avg VP | Avg W | Avg W-VP | Min/Max |`);
+console.log(`|---|---|---|---|---|---|`);
 
 for (const [strat, stats] of Object.entries(strategyStats)) {
     const winRate = ((stats.wins / stats.games) * 100).toFixed(1) + '%';
     const avgVP = (stats.totalVP / stats.games).toFixed(2);
+    const avgW = (stats.totalW / stats.games).toFixed(2);
+    const avgWVP = (stats.totalWVP / stats.games).toFixed(2);
     const avgBuilt = (stats.construction / stats.games).toFixed(1);
 
     // Note: Win rate calculation here is "Percentage of games participated in that ended in a win".
@@ -134,8 +168,33 @@ for (const [strat, stats] of Object.entries(strategyStats)) {
     // Let's stick to per-slot stats.
     // "Win %": probability that a slot with this strategy wins.
 
-    console.log(`| ${strat.padEnd(10)} | ${winRate.padStart(8)} | ${avgVP.padStart(6)} | ${stats.minVP}/${stats.maxVP} | ${avgBuilt.padStart(9)} |`);
+    console.log(`| ${strat.padEnd(10)} | ${winRate.padStart(8)} | ${avgVP.padStart(6)} | ${avgW.padStart(5)} | ${avgWVP.padStart(8)} | ${stats.minVP}/${stats.maxVP} |`);
 }
 
-// Peak Resources (if available in schema)
-// ...
+console.log("\n=== Map Node Strength (Performance) ===");
+console.log("| Node | Visits | Res Yield | Prod Boost | Card Yield | Score |");
+console.log("|---|---|---|---|---|---|");
+
+const nodeList = Object.entries(nodeStrengthStats).map(([id, s]) => {
+    const avgVisits = s.visits / results.length;
+    const avgRes = s.resGained / results.length;
+    const avgProd = s.prodGained / results.length;
+    const avgCards = s.cardsGained / results.length;
+    // Score calculation: Weight resources, production and cards
+    const score = (avgRes * 1.0) + (avgProd * 1.5) + (avgCards * 2.5);
+    return {
+        name: nodeNames[id] || `Node ${id}`,
+        visits: avgVisits.toFixed(2),
+        res: avgRes.toFixed(2),
+        prod: avgProd.toFixed(2),
+        cards: avgCards.toFixed(2),
+        score: score.toFixed(2)
+    };
+});
+
+nodeList.sort((a, b) => b.score - a.score);
+nodeList.forEach(n => {
+    console.log(`| ${n.name.padEnd(15)} | ${n.visits.padStart(6)} | ${n.res.padStart(9)} | ${n.prod.padStart(10)} | ${n.cards.padStart(10)} | ${n.score.padStart(5)} |`);
+});
+
+console.log("\n* Score = (AvgRes * 1.0) + (AvgProd * 1.5) + (AvgCards * 2.5)");

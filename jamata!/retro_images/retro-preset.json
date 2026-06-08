@@ -1,0 +1,43 @@
+{
+  "inks": [
+    {
+      "id": "ink-3",
+      "color": "#ffbb00"
+    },
+    {
+      "id": "ink-1773852054866",
+      "color": "#006f8f"
+    },
+    {
+      "id": "ink-2",
+      "color": "#ea4859"
+    },
+    {
+      "id": "ink-1773852717084",
+      "color": "#904747"
+    },
+    {
+      "id": "ink-1",
+      "color": "#002c58"
+    },
+    {
+      "id": "ink-1773828602144",
+      "color": "#005242"
+    },
+    {
+      "id": "ink-1773852831496",
+      "color": "#481f7a"
+    }
+  ],
+  "bgColor": "#f7f3e8",
+  "offset": 1,
+  "noise": 20,
+  "noiseType": "grain",
+  "bleed": 2,
+  "grainSize": 3,
+  "stipple": 50,
+  "texture": 30,
+  "roller": 30,
+  "edgeDark": 30,
+  "spatter": 40
+}

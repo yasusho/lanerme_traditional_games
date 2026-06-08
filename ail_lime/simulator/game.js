@@ -8,7 +8,6 @@ class Game {
         this.players = [];
         this.deck = [];
         this.discardPile = [];
-        this.roundTokens = 0;
         this.round = 1;
         this.phase = "setup"; // setup, plan, execute, replenish
         this.startPlayerIndex = 0;
@@ -101,7 +100,7 @@ class Game {
         // --- プレイヤー人数選択ボタン ---
         const countBtns = document.querySelectorAll('.count-btn');
         countBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
+            btn.onclick = () => {
                 countBtns.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 this.playerCount = parseInt(btn.dataset.count);
@@ -130,7 +129,7 @@ class Game {
                         this.p2pReady = false;
                     }
                 }
-            });
+            };
         });
 
         // --- ゲームモード選択関連要素 ---
@@ -143,7 +142,7 @@ class Game {
         const countSection = document.querySelector('.player-count-buttons');
 
         modeBtns.forEach(btn => {
-            btn.addEventListener('click', async () => {
+            btn.onclick = async () => {
                 // ボタンスタイルの切替
                 modeBtns.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
@@ -228,11 +227,12 @@ class Game {
                     }
                     guestSection.style.display = 'block';
                 }
-            });
+            };
         });
 
         // --- ゲスト接続ボタン ---
-        document.getElementById('btn-connect-p2p').addEventListener('click', async () => {
+        const connectBtn = document.getElementById('btn-connect-p2p');
+        if (connectBtn) connectBtn.onclick = async () => {
             const roomId = document.getElementById('room-id-input').value.trim();
             const statusDiv = document.getElementById('p2p-connection-status');
 
@@ -259,31 +259,36 @@ class Game {
                 statusDiv.textContent = '接続失敗: ' + err.message;
                 statusDiv.style.color = 'red';
             }
-        });
+        };
 
         // --- ゲーム開始ボタン (P2P ホスト) ---
-        document.getElementById('btn-start-p2p').addEventListener('click', () => {
+        const startP2PBtn = document.getElementById('btn-start-p2p');
+        if (startP2PBtn) startP2PBtn.onclick = () => {
             if (this.networkMode === 'host' && this.p2pReady) {
                 this.simulationMode = false;
                 this.localPlayerId = 0; // ホストはID:0
                 this.startSetup();
             }
-        });
+        };
 
         // --- ゲーム開始ボタン (通常) ---
-        document.getElementById('btn-start-normal').addEventListener('click', () => {
+        const startNormalBtn = document.getElementById('btn-start-normal');
+        if (startNormalBtn) startNormalBtn.onclick = () => {
             this.networkMode = 'local';
             this.simulationMode = false;
             this.startSetup();
-        });
+        };
 
         // --- ゲーム開始ボタン (シミュレーション) ---
-        document.getElementById('btn-start-simulation').addEventListener('click', () => {
+        const startSimBtn = document.getElementById('btn-start-simulation');
+        if (startSimBtn) startSimBtn.onclick = () => {
             this.networkMode = 'local';
             this.simulationMode = true;
             this.startSetup();
-        });
+        };
     }
+
+
 
     /**
      * P2Pネットワークイベントのリスナー設定
@@ -584,7 +589,6 @@ class Game {
             }
             const card = data.cardInstanceId ? player.construction.find(c => c.instanceId === data.cardInstanceId) : null;
             if (card) card.usedThisTurn = true;
-            this.playSFX('convert');
             this.log(`${player.name} が変換アクションを実行しました`);
             this.updateUI();
         }
@@ -776,7 +780,7 @@ class Game {
 
         // --- 1. 資源・トークン初期化 ---
         // this.playerCount は UIセットアップで設定済み
-        this.roundTokens = this.playerCount * 3;
+        this.roundTokens = this.playerCount * 5; // Rusher対策でトークン増量 (x3 -> x5)
         this.log(`ラウンドトークン数: ${this.roundTokens}`);
 
         // --- 2. プレイヤー生成と初期化 ---
@@ -810,7 +814,7 @@ class Game {
                     location: 1, // スタート地点: Node 01
                     hand: [],
                     construction: [],
-                    resources: { F: 0, M: 0, K: 0, W: 0 },
+                    resources: { F: 0, M: 0, K: 0, W: 2 },
                     selectedCard: null,
                     vp: 0,
                     isAI: false,
@@ -832,7 +836,7 @@ class Game {
                     location: 1, // スタート地点: Node 01
                     hand: [],
                     construction: [],
-                    resources: { F: 0, M: 0, K: 0, W: 0 },
+                    resources: { F: 0, M: 0, K: 0, W: 2 },
                     selectedCard: null, // 計画フェーズでの選択カード
                     vp: 0,
                     isAI: (i !== humanIndex), // humanIndex 以外はAI
@@ -886,20 +890,41 @@ class Game {
     checkAIPlan() {
         if (this.phase !== 'plan') return;
 
-        try {
-            // AIは即座にカード選択
-            this.players.forEach(p => {
-                if (p.isAI && !p.selectedCard) {
+        // AIは即座にカード選択
+        this.players.forEach(p => {
+            if (p.isAI && !p.selectedCard) {
+                try {
                     // スマート選択ロジックの呼び出し
                     this._performAISelect(p);
+                } catch (e) {
+                    console.error("AI Plan Error:", e);
+                    this.log(`AI Error (${p.name}): ${e.message}`, true);
+
+                    // フォールバック: エラー時はランダムに選択して進行を止めない
+                    if (p.hand.length > 0) {
+                        const randomCard = p.hand[Math.floor(Math.random() * p.hand.length)];
+                        p.selectedCard = randomCard;
+                        this.log(`${p.name} selected randomly due to error.`);
+                    }
                 }
-            });
-        } catch (e) {
-            console.error("AI Plan Error:", e);
-            this.log(`AI Error: ${e.message}`, true);
-        }
+            }
+        });
 
         this.updateUI();
+
+        // シミュレーションモード / 全員AIの場合: 全員が選択済みなら自動的にexecuteフェーズへ
+        const allSelected = this.players.every(p => p.selectedCard);
+        if (allSelected && !this.isP2PMode()) {
+            const delay = this.simulationMode ? this.simSpeed : 100;
+            setTimeout(() => {
+                this.phase = 'execute';
+                this.currentPlayerIndex = this.startPlayerIndex;
+                this.turnsPlayedInRound = 0;
+                this.log('実行フェーズ開始');
+                this.updateUI();
+                this.startExecuteTurn();
+            }, delay);
+        }
     }
 
     /**
@@ -933,68 +958,142 @@ class Game {
     }
 
     /**
-     * AI用: カード評価スコア計算
+    /**
+     * AI用: カード評価スコア計算 - 性格差を過激に反映
      * @param {Object} player 評価するAIプレイヤー
      * @param {Object} card 評価対象カード
      * @returns {number} 評価スコア（高いほど優先度高）
      */
     calculateCardScore(player, card) {
         let score = 0;
+        const totalRes = (player.resources.F || 0) + (player.resources.M || 0) + (player.resources.K || 0) + (player.resources.W || 0);
         const { canBuild } = this.canBuild(player, card);
 
+        const isBuilder = player.aiStrategy === 'Builder';
+        const isLooper = player.aiStrategy === 'Looper';
+        const isBalanced = player.aiStrategy === 'Balanced';
+
+        // --- A. 建設スコア ---
+        let buildScore = -Infinity;
+
         if (canBuild) {
-            // --- 建設可能な場合 ---
-            score += 1000; // 基本スコア: 建設優先
+            buildScore = 0;
 
-            // VP価値（可変VPカードは推定値）
+            // 基礎点: Builderは建設自体が快感
+            if (isBuilder) buildScore += 50000;
+            else if (isLooper) buildScore -= 1000; // Looperは基本建てたくない
+            else buildScore += 500; // Balanced
+
+            // VP価値
             let vpVal = card.vp || 0;
-            if (card.vp_logic === 'variable') vpVal = 2; // 可変VPの仮置き値
-            score += vpVal * 20;
+            if (card.vp_logic === 'variable') vpVal = 2.5;
 
-            // 産出価値ボーナス
-            if (card.production) score += 50;
+            if (isBuilder) buildScore += vpVal * 200; // 建設狂
+            else buildScore += vpVal * 50;
 
-            // 効果価値ボーナス
-            if (card.effect) score += 30;
-
-            // コスト効率などは現バージョンでは考慮略
-        } else {
-            // --- 建設不可な場合 (移動用として評価) ---
-
-            // 移動力と使いやすさ
-            score += (card.move || 0) * 10;
-            if (card.move >= 3) score += 20; // 高機動力ボーナス
-
-            // 移動時資源獲得効果
-            if (card.move_resource && card.move_resource.length > 0) {
-                score += 30;
+            // 産出・効果・ドロー: Builderのみ重視
+            if (isBuilder) {
+                if (card.production) buildScore += 1000;
+                if (card.effect) buildScore += 500;
+                if (card.draw_extra) buildScore += 800;
+                if (card.chain_build) buildScore += 1500;
             }
 
-            // 移動0は移動手段として弱いのでペナルティ
-            if (card.move === 0) score -= 50;
-
-            // --- AI性格特性による補正 ---
-            const strategy = player.aiStrategy || 'Naive';
-
-            // "もったいない"判定: 高価値カードを捨てて移動することへの抵抗感
-            let cardValue = 0;
-            if (card.vp >= 2 || (card.vp_logic && card.vp_logic !== 'none')) cardValue += 50;
-            if (card.production) cardValue += 30;
-            if (card.cost && (card.cost.F + card.cost.M + card.cost.K >= 4)) cardValue += 40; // 高コスト
-
-            if (strategy === 'Balanced') {
-                score -= cardValue * 2; // バランス型: 少し抵抗あり
-                if (card.move >= 3) score += 10;
-            } else if (strategy === 'Hoarder') {
-                score -= cardValue * 10; // 溜め込み型: 強く抵抗
-            } else if (strategy === 'Rusher') {
-                if (card.move >= 3) score += 100; // 速攻型: 高速移動なら気にしない
-                // カード価値によるペナルティなし
+            // W消費ペナルティ (Looperは死んでもWを使いたくない)
+            let wCost = player.resources.W < card.cost.W ? 0 : card.cost.W || 0;
+            let neededW = 0;
+            if (card.cost) {
+                if (card.cost.W) neededW += card.cost.W;
+                ['F', 'M', 'K'].forEach(r => {
+                    let diff = (card.cost[r] || 0) - (player.resources[r] || 0);
+                    if (diff > 0) neededW += diff;
+                });
             }
-            // Naive型: ペナルティなし
+
+            if (isLooper && neededW > 0) {
+                // Wを使って建てるなら絶対に建てないレベルのペナルティ
+                buildScore -= 100000;
+            }
+            // BuilderはWを使ってでも建てるのでペナルティなし
         }
 
-        return score;
+        // --- B. 移動スコア ---
+        let moveScore = 0;
+        const steps = card.move;
+
+        if (steps > 0) {
+            const reachable = this.getReachableNodes(player.location, steps);
+            let maxNodeScore = -Infinity;
+
+            // 欲しい資源
+            const wantedRes = new Set();
+            player.hand.forEach(h => {
+                if (h.cost) {
+                    ['F', 'M', 'K'].forEach(r => {
+                        if ((player.resources[r] || 0) < (h.cost[r] || 0)) wantedRes.add(r);
+                    });
+                }
+            });
+
+            reachable.forEach(targetId => {
+                let nodeScore = 0;
+                const node = mapNodes.find(n => n.id === targetId);
+                const path = this.findPath(player.location, targetId, steps);
+
+                // 1. 周回 (Looperの生きがい)
+                if (this.checkPathForLoop(path)) {
+                    if (this.roundTokens > 0) {
+                        if (isLooper) nodeScore += 50000; // 最優先
+                        if (isBuilder) nodeScore -= 1000; // 資源のない移動は無駄
+                        if (isBalanced) nodeScore += 2000;
+
+                        if (this.roundTokens <= 3) nodeScore += 500;
+                    }
+                }
+
+                // 2. 資源獲得 (Builderの生きがい)
+                const nodeRes = node.resource;
+                let isUseful = false;
+                if (nodeRes === 'FMK' || nodeRes === 'W') isUseful = true;
+                else if (nodeRes && wantedRes.has(nodeRes)) isUseful = true;
+
+                if (isUseful) {
+                    if (isBuilder) nodeScore += 5000; // 資源全力
+                    else if (isLooper) nodeScore += 100; // ついで
+                    else nodeScore += 500;
+                } else if (nodeRes) {
+                    // 不要資源
+                    if (isBuilder) nodeScore += 500; // とりあえず貰っとく
+                }
+
+                // 3. 特殊マス (Looper好き)
+                if (targetId === 12 || targetId === 14) { // Warp
+                    if (isLooper) nodeScore += 20000;
+                    if (isBuilder) nodeScore -= 500; // 飛ばされるの嫌い
+                }
+                if (targetId === 5 && player.hand.length >= 2) { // Extra Move
+                    if (isLooper) nodeScore += 10000;
+                }
+
+                if (nodeScore > maxNodeScore) maxNodeScore = nodeScore;
+            });
+
+            moveScore = maxNodeScore;
+
+            // カード犠牲コスト
+            if (isBuilder) {
+                // 建てるべきカードを移動に使うのは重罪
+                if (canBuild) moveScore -= 50000;
+                if (card.vp > 0) moveScore -= card.vp * 1000;
+            }
+            // Looperは移動のためなら何でも捨てる
+
+        } else {
+            moveScore = -Infinity;
+        }
+
+        // 最終決定
+        return Math.max(buildScore, moveScore);
     }
 
     /**
@@ -1014,80 +1113,33 @@ class Game {
 
     /**
      * AI戦略のランダム選択
-     * @returns {string} 戦略名 ('Balanced', 'Hoarder', 'Rusher', 'Naive')
+     * @returns {string} 戦略名 ('Balanced', 'Hoarder', 'Rusher')
      */
     getRandomAIStrategy() {
-        const strategies = ['Balanced', 'Hoarder', 'Rusher', 'Naive'];
+        // Rusher/Hoarder 削除 -> Builder/Looper 追加
+        const strategies = ['Balanced', 'Builder', 'Looper'];
         return strategies[Math.floor(Math.random() * strategies.length)];
     }
 
     /**
      * 指定歩数で到達可能な全ノードIDを取得
-     * 行き止まりマス（接続先1つ）では折り返しを許可
      * @param {number} startId 開始ノードID
      * @param {number} steps 移動歩数
      * @returns {Array<number>} 到達可能なノードIDの配列
      */
     getReachableNodes(startId, steps) {
-        if (steps === 0) return [startId];
-        let queue = [{ id: startId, path: [startId], dist: 0 }];
-        let valid = new Set();
-        while (queue.length > 0) {
-            const cur = queue.shift();
-            if (cur.dist === steps) { valid.add(cur.id); continue; }
-            const node = mapNodes.find(n => n.id === cur.id);
-            if (node && node.connections) {
-                node.connections.forEach(next => {
-                    // 行き止まりノード（接続先1つ）の場合は折り返しを許可
-                    const isDeadEnd = node.connections.length === 1;
-                    // 同じノードを連続で2回以上踏まないようにする（無限ループ防止）
-                    // ただし、行き止まりからの折り返しは許可
-                    const lastVisit = cur.path.lastIndexOf(next);
-                    const canVisit = lastVisit === -1 || (isDeadEnd && lastVisit !== cur.path.length - 1);
-
-                    if (canVisit) {
-                        queue.push({ id: next, path: [...cur.path, next], dist: cur.dist + 1 });
-                    }
-                });
-            }
-        }
-        return valid.size > 0 ? Array.from(valid) : [startId];
+        return GameCore.getReachableNodes(mapNodes, startId, steps);
     }
 
     /**
-     * 最短経路探索（幅優先探索）
-     * 行き止まりマス（接続先1つ）では折り返しを許可
+     * 最短経路探索
      * @param {number} from 開始ノードID
      * @param {number} to 目標ノードID
-     * @param {number} steps 正確な歩数（指定された場合、その歩数での経路を探す）
+     * @param {number} steps 正確な歩数
      * @returns {Array<number>} 経路（ノードID配列）
      */
     findPath(from, to, steps) {
-        if (from === to) return [from];
-        let queue = [{ id: from, path: [from] }];
-        while (queue.length > 0) {
-            const cur = queue.shift();
-            // 指定歩数を超える経路は探索しない
-            if (cur.path.length > steps + 1) continue;
-
-            // 目標到達かつ歩数一致なら返却
-            if (cur.id === to && cur.path.length === steps + 1) return cur.path;
-
-            const node = mapNodes.find(n => n.id === cur.id);
-            if (node && node.connections) {
-                node.connections.forEach(next => {
-                    // 行き止まりノード（接続先1つ）の場合は折り返しを許可
-                    const isDeadEnd = node.connections.length === 1;
-                    const lastVisit = cur.path.lastIndexOf(next);
-                    const canVisit = lastVisit === -1 || (isDeadEnd && lastVisit !== cur.path.length - 1);
-
-                    if (canVisit) {
-                        queue.push({ id: next, path: [...cur.path, next] });
-                    }
-                });
-            }
-        }
-        return [from]; // 見つからない場合は現在地のみ返す（安全策）
+        return GameCore.findPath(mapNodes, from, to, steps);
     }
 
     /**
@@ -1096,10 +1148,7 @@ class Game {
      * @returns {boolean} 周回を含むならtrue
      */
     checkPathForLoop(path) {
-        for (let i = 0; i < path.length - 1; i++) {
-            if (path[i] === 10 && path[i + 1] === 1) return true;
-        }
-        return false;
+        return GameCore.checkPathForLoop(path);
     }
 
     /**
@@ -1338,10 +1387,81 @@ class Game {
         this.executeAIConversions(player);
 
         const { canBuild } = this.canBuild(player, card);
+        const wCount = player.resources.W || 0;
+        const buildingCount = player.construction.length;
+        const totalRes = (player.resources.F || 0) + (player.resources.M || 0) + (player.resources.K || 0) + (player.resources.W || 0);
+        const isLate = this.round >= 8;
 
-        // 戦略優先度判定
+        // --- Build Score ---
+        let buildScore = 0;
         if (canBuild) {
-            // 1. 建設優先（スコア最大化）
+            let vpVal = card.vp || 0;
+            if (card.vp_logic === 'variable') {
+                const counts = {
+                    culture: player.construction.filter(c => c.type === 'culture').length,
+                    industry: player.construction.filter(c => c.type === 'industry').length,
+                    politics: player.construction.filter(c => c.type === 'politics').length
+                };
+                if (card.id === 15) vpVal = (counts.culture + 1) * 2;
+                else if (card.id === 16) vpVal = (counts.industry + 1) * 2;
+                else if (card.id === 17) vpVal = (counts.politics + 1) * 2;
+                else if (card.id === 18) vpVal = wCount * 2;
+                else if (card.id === 19) vpVal = Math.min(counts.culture, counts.industry, counts.politics) * 3 + 3;
+                else vpVal = 3;
+            }
+            let vpWeight = isLate ? 150 : 100;
+            if (player.aiStrategy === 'Builder') vpWeight += 50;
+            buildScore += vpVal * vpWeight;
+
+            if (card.production && !isLate) {
+                const remaining = 12 - this.round;
+                let prodVal = 0;
+                for (let k in card.production) if (typeof card.production[k] === 'number') prodVal += card.production[k];
+                buildScore += prodVal * remaining * 40;
+            }
+            buildScore += 300;
+            if (player.aiStrategy === 'Builder') buildScore += 1000;
+            if (totalRes >= 8) buildScore += 500;
+            if (wCount > buildingCount) buildScore += 200;
+        }
+
+        // --- Move Score ---
+        let moveScore = 0;
+        const steps = card.move;
+        if (steps > 0) {
+            const reachable = this.getReachableNodes(player.location, steps);
+            reachable.forEach(tid => {
+                let nodeScore = 0;
+                const path = this.findPath(player.location, tid, steps);
+                const node = mapNodes.find(n => n.id === tid);
+
+                if (this.checkPathForLoop(path)) {
+                    let wVal = (this.roundTokens > 0) ? 300 : 50;
+                    if (player.aiStrategy === 'Looper') wVal += 2000;
+                    if (isLate) wVal += 200;
+                    nodeScore += wVal;
+                }
+                if (node && node.resource) {
+                    let resVal = 100;
+                    if (node.resource === 'FMK') {
+                        if (totalRes < 4) resVal = 250;
+                        else if (totalRes >= 7) resVal = 20;
+                    } else if (node.resource === 'W') {
+                        resVal = 200;
+                    }
+                    nodeScore += resVal;
+                }
+                if (tid === 12 || tid === 14) nodeScore += 150;
+
+                if (nodeScore > moveScore) moveScore = nodeScore;
+            });
+        }
+
+        let action = (buildScore > moveScore && canBuild) ? 'build' : 'move';
+
+        // 戦略実行
+        if (action === 'build') {
+            // 1. 建設実行
             this.executeBuild(player, card);
         } else {
             // 2. 移動アクション
@@ -1367,45 +1487,45 @@ class Game {
                     const nodeData = mapNodes.find(n => n.id === targetId);
                     const path = this.findPath(player.location, targetId, steps);
 
-                    // 評価A: 周回ボーナス (Round Token)
-                    let loopBonus = 50;
-                    if (player.aiStrategy === 'Rusher') loopBonus = 150; // Rusherは周回重視
+                    // 評価A: 周回ボーナス (W Token)
                     if (this.checkPathForLoop(path)) {
-                        score += loopBonus;
+                        if (this.roundTokens > 0) {
+                            score += 250;
+                            if (player.aiStrategy === 'Rusher') score += 150;
+                            if (this.roundTokens <= 3) score += 100;
+                        } else {
+                            score += 20;
+                        }
                     }
 
                     // 評価B: 資源獲得ボーナス（将来の建設に必要か）
-                    // マスの資源が手札のカードコストと合致するかチェック
                     const needed = new Set();
                     player.hand.forEach(hCard => {
                         if (hCard.cost) {
                             Object.keys(hCard.cost).forEach(res => {
-                                // Hoarderは資源価値を高く見積もる
-                                if (player.aiStrategy === 'Hoarder') {
-                                    if (player.resources[res] < hCard.cost[res]) needed.add(res);
-                                } else {
-                                    if (player.resources[res] < hCard.cost[res]) {
-                                        needed.add(res);
-                                    }
-                                }
+                                if (player.resources[res] < hCard.cost[res]) needed.add(res);
                             });
                         }
                     });
 
-                    let needBonus = 20;
-                    if (player.aiStrategy === 'Hoarder') needBonus = 80;
-                    if (player.aiStrategy === 'Rusher') needBonus = 10;
+                    let needBonus = 120; // 資源価値アップ
+                    if (player.aiStrategy === 'Hoarder') needBonus = 180;
 
-                    if (needed.has(nodeData.resource)) {
+                    if (nodeData.resource === 'FMK' || nodeData.resource === 'W' || needed.has(nodeData.resource)) {
                         score += needBonus;
+                    } else if (nodeData.resource) {
+                        score += 30; // 不要資源
                     }
 
                     // 評価C: 前進距離ボーナス
-                    // (TargetIdx - CurrentIdx + 10) % 10 で前進距離を計算
                     const currIdx = parseInt(player.location);
                     const targetIdx = parseInt(targetId);
                     const progress = (targetIdx - currIdx + 10) % 10 || 10;
                     score += progress;
+
+                    // 評価D: 特殊マス
+                    if (targetId === 12 || targetId === 14) score += 50; // ワープ
+                    if (targetId === 11 && player.hand.length >= 2) score += 60; // スプケベス
 
                     return { id: targetId, score };
                 });
@@ -1427,13 +1547,19 @@ class Game {
                 // 実際の移動処理
                 const finalPath = this.findPath(player.location, bestTarget, steps);
                 if (this.checkPathForLoop(finalPath)) {
-                    this.log(`${player.name} passed 10->01! Round Token Get!`);
-                    player.roundTokens = (player.roundTokens || 0) + 1;
-                    this.roundTokens--;
+                    if (this.roundTokens > 0) {
+                        this.log(`${player.name} passed 10->01! W Token Get!`);
+                        this.gainResource(player, 'W', 1);
+                        this.checkResourceCap(player);
+                    } else {
+                        this.log(`${player.name} passed 10->01! (Supply Empty)`);
+                    }
+                    this.checkGameEnd();
                 }
 
                 this.updateNodeStacks(player, bestTarget, passengers);
-                this.finishMove(player, bestTarget, card);
+                this.finishMove(player, bestTarget, card, passengers);
+                // checkGameEndはfinishMove内で呼ばれるため削除してもよいが念のため
                 this.checkGameEnd();
             }
         }
@@ -1702,14 +1828,18 @@ class Game {
 
         const path = this.findPath(player.location, targetNodeId, card.move);
         if (this.checkPathForLoop(path)) {
-            this.log(`10->01を通過！周回トークン獲得！`);
-            this.roundTokens--;
-            player.roundTokens = (player.roundTokens || 0) + 1;
+            if (this.roundTokens > 0) {
+                this.log(`10->01を通過！Wトークン獲得！`);
+                this.gainResource(player, 'W', 1);
+                this.checkResourceCap(player);
+            } else {
+                this.log(`10->01を通過！(サプライ枯渇のためW獲得なし)`);
+            }
             this.checkGameEnd();
         }
 
         this.updateNodeStacks(player, targetNodeId, passengers);
-        this.finishMove(player, targetNodeId, card);
+        this.finishMove(player, targetNodeId, card, passengers);
     }
 
     /**
@@ -1719,9 +1849,23 @@ class Game {
      * @param {number} targetNodeId 移動先ノードID
      * @param {Object} card 使用したカード（移動資源がある場合）
      */
-    finishMove(player, targetNodeId, card) {
+    finishMove(player, targetNodeId, card, passengers = []) {
+        // IDを数値に正規化
+        targetNodeId = Number(targetNodeId);
+
         // プレイヤーの位置を更新
         player.location = targetNodeId;
+
+        // Warp Logic: ワープマスなら即時転送
+        const currentNode = mapNodes.find(n => n.id === player.location);
+        if (currentNode && currentNode.warpTo) {
+            this.log(`🌌 ワープ発動！ ${currentNode.name} から転送されます`);
+            this.updateNodeStacks(player, currentNode.warpTo, passengers);
+            targetNodeId = currentNode.warpTo;
+            player.location = targetNodeId; // 位置情報の再更新
+            // 同乗者も一緒に位置更新
+            passengers.forEach(p => p.location = targetNodeId);
+        }
 
         // ノードデータを取得
         const node = mapNodes.find(n => n.id === targetNodeId);
@@ -1816,10 +1960,178 @@ class Game {
                     });
                 }
 
-                this.continueFinishMove(player, card);
+                // タウポ（5）特殊アクション確認
+                this.checkExtraMoveAction(player, () => {
+                    this.continueFinishMove(player, card);
+                });
             });
         });
     }
+
+    /**
+     * スプケベス（11）追加移動アクション確認
+     * カードを捨てて追加移動するかどうかをプレイヤーに選択させる
+     */
+    checkExtraMoveAction(player, callback) {
+        // タウポ(5)での追加移動（旧スプケベス11から変更）
+        if (player.location !== 5) {
+            callback();
+            return;
+        }
+
+        // 追加移動に使えるカードがあるか確認
+        const movableCards = player.hand.filter(c => c);
+        if (movableCards.length === 0) {
+            if (this.isLocalPlayer(player)) {
+                // ダイアログが出ないのでログだけ出す
+                // this.log(`${player.name} はスプケベスに到着しましたが、追加移動できるカードがありません。`);
+            }
+            callback();
+            return;
+        }
+
+        if (player.isAI) {
+            // AI: 50%の確率で追加移動
+            if (Math.random() < 0.5) {
+                const card = movableCards[Math.floor(Math.random() * movableCards.length)];
+                this.log(`${player.name} (AI) はタウポの効果を使用します。`);
+                this.executeExtraMove(player, card);
+            } else {
+                callback();
+            }
+            return;
+        }
+
+        // 人間プレイヤー: モーダル表示
+        if (this.isLocalPlayer(player)) {
+            this.showConfirmModal(
+                "タウポ特殊効果",
+                "手札を1枚捨てて、そのカードの移動数分だけ追加移動しますか？",
+                () => {
+                    this.showExtraMoveCardSelectModal(player, movableCards, (selectedCard) => {
+                        this.executeExtraMove(player, selectedCard);
+                    }, callback);
+                },
+                () => {
+                    callback();
+                }
+            );
+        } else {
+            callback();
+        }
+    }
+
+    /**
+     * 追加移動用カード選択モーダル
+     */
+    showExtraMoveCardSelectModal(player, cards, onSelect, onCancel) {
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.style.display = 'flex';
+
+        let cardsHtml = '';
+        cards.forEach((card, idx) => {
+            const originalIdx = player.hand.indexOf(card);
+            cardsHtml += `
+                <div class="modal-card-item" onclick="window.game.handleExtraMoveCardSelect(${originalIdx})">
+                    <img src="${card.image_src}" style="width:100px; cursor:pointer; border:2px solid transparent; border-radius:8px;">
+                    <div style="text-align:center; font-size:0.8rem; margin-top:5px;">移動: ${card.move}</div>
+                </div>
+            `;
+        });
+
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width:800px;">
+                <h3>追加移動に使用するカードを選択</h3>
+                <div style="display:flex; gap:15px; flex-wrap:wrap; justify-content:center; margin-bottom:20px;">
+                    ${cardsHtml}
+                </div>
+                <div class="modal-buttons">
+                    <button onclick="window.game.closeExtraMoveModal(true)">キャンセル</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        window.game.handleExtraMoveCardSelect = (handIndex) => {
+            document.body.removeChild(modal);
+            delete window.game.handleExtraMoveCardSelect;
+            delete window.game.closeExtraMoveModal;
+            const card = player.hand[handIndex];
+            onSelect(card);
+        };
+
+        window.game.closeExtraMoveModal = (isCancel) => {
+            if (isCancel) {
+                document.body.removeChild(modal);
+                delete window.game.handleExtraMoveCardSelect;
+                delete window.game.closeExtraMoveModal;
+                onCancel();
+            }
+        };
+    }
+
+    /**
+     * 追加移動実行
+     */
+    executeExtraMove(player, card) {
+        this.log(`${player.name} は ${card.name_jp} を捨てて追加移動します（移動力: ${card.move}）。`);
+
+        this.discardPile.push(card);
+        this.removeCardFromHand(player, card);
+
+        const move = card.move;
+        const reachableNodes = this.getReachableNodes(player.location, move);
+
+        if (reachableNodes.length === 0) {
+            this.continueFinishMove(player, null);
+            return;
+        }
+
+        // 移動実行処理（AIまたは移動先が1つの場合）
+        const executeMove = (target) => {
+            const path = this.findPath(player.location, target, move);
+            if (this.checkPathForLoop(path)) {
+                if (this.roundTokens > 0) {
+                    this.log(`10->01を通過！Wトークン獲得！`);
+                    this.roundTokens--;
+                    player.resources.W = (player.resources.W || 0) + 1;
+                    this.checkResourceCap(player);
+                } else {
+                    this.log(`10->01を通過！(サプライ枯渇のためW獲得なし)`);
+                }
+                this.checkGameEnd();
+            }
+            this.updateNodeStacks(player, target, []); // 単独移動
+            this.finishMove(player, target, null);
+        };
+
+        if (reachableNodes.length === 1 || player.isAI) {
+            const target = player.isAI ? reachableNodes[Math.floor(Math.random() * reachableNodes.length)] : reachableNodes[0];
+            executeMove(target);
+        } else {
+            // 分岐選択（人間）
+            this.log("移動先を選択してください。");
+            reachableNodes.forEach(nid => {
+                const nodeEl = document.getElementById(`node-${nid}`);
+                if (nodeEl) {
+                    nodeEl.classList.add('reachable');
+                    nodeEl.style.cursor = 'pointer';
+                    nodeEl.onclick = () => {
+                        document.querySelectorAll('.reachable').forEach(el => {
+                            el.classList.remove('reachable');
+                            el.style.cursor = '';
+                            el.onclick = null;
+                        });
+                        executeMove(nid);
+                    };
+                }
+            });
+            this.showToast("移動先クリックで決定", "info");
+        }
+    }
+
+
 
     /**
      * 移動後の事後処理
@@ -1951,16 +2263,12 @@ class Game {
      * @param {Object} card 建設対象カード
      * @returns {Object} { canBuild: boolean, reason?: string }
      */
+    /**
+     * 建設可能性チェック
+     * GameCoreを使用
+     */
     canBuild(player, card) {
-        // 重複チェックは意図的に除外（同一カードの複数建設が可能）
-        // ユーザー要望によりルール変更済み
-
-        // コストチェック
-        if (this.checkCost(player, card.cost)) {
-            return { canBuild: true };
-        } else {
-            return { canBuild: false, reason: "insufficient_resources" };
-        }
+        return GameCore.canBuild(player.resources, card);
     }
 
     /**
@@ -1970,23 +2278,12 @@ class Game {
      * @param {Object} cost コストオブジェクト
      * @returns {boolean} 支払い可能ならtrue
      */
+    /**
+     * コストチェック
+     * GameCoreを使用
+     */
     checkCost(player, cost) {
-        if (cost.multi === "same3") {
-            const maxRaw = Math.max(player.resources.F, player.resources.M, player.resources.K);
-            return (maxRaw + player.resources.W >= 3);
-        }
-
-        // 必須資源に対する不足分を計算し、Wで補えるか判定
-        let totalDeficit = 0;
-        for (let key in cost) {
-            if (key === 'multi') continue;
-            let required = cost[key];
-            let available = (player.resources[key] || 0);
-            if (available < required) {
-                totalDeficit += (required - available);
-            }
-        }
-        return player.resources.W >= totalDeficit;
+        return GameCore.checkCost(player.resources, cost);
     }
 
     /**
@@ -1995,6 +2292,10 @@ class Game {
      * @param {Object} player プレイヤー
      * @param {string|Object} cardOrEffect 効果文字列 または カードオブジェクト
      * @returns {boolean} 可能ならtrue
+     */
+    /**
+     * 変換アクション可能性判定
+     * GameCoreを使用
      */
     canConvert(player, cardOrEffect) {
         let effect = cardOrEffect;
@@ -2007,18 +2308,7 @@ class Game {
         // ターン1回制限のチェック
         if (card && card.usedThisTurn) return false;
 
-        if (effect === 'convert_same3_to_W') {
-            const r = player.resources;
-            return ((r.F || 0) >= 3) || ((r.M || 0) >= 3) || ((r.K || 0) >= 3);
-        } else if (effect === 'convert_K2_to_W') {
-            return ((player.resources.K || 0) + (player.resources.W || 0) >= 2);
-        } else if (effect === 'convert_W2_to_W3') {
-            // Wが2個以上必要（W3になるので実質+1）
-            return (player.resources.W || 0) >= 2;
-        } else if (effect === 'action_gain_1_choice') {
-            return true; // 常に実行可能（使用制限は上で処理）
-        }
-        return false;
+        return GameCore.canConvert(player.resources, effect);
     }
 
     /**
@@ -2027,7 +2317,7 @@ class Game {
     getConversionLabel(effect) {
         if (effect === 'convert_same3_to_W') return '同種3 → W';
         if (effect === 'convert_K2_to_W') return 'K2 → W';
-        if (effect === 'convert_W2_to_W3') return 'W2+K1 → W3'; // 過去の遺産表記かも？ロジックはW2->W3
+        if (effect === 'convert_W2_to_FMK') return 'W2 → F+M+K';
         if (effect === 'action_gain_1_choice') return '獲得: F/M/Kの1つ';
         return effect;
     }
@@ -2035,6 +2325,7 @@ class Game {
     formatCost(cost) {
         if (!cost) return 'なし';
         if (cost.multi === 'same3') return '同種3';
+        if (cost.multi === 'same4') return '同種4';
         const parts = [];
         for (const [key, val] of Object.entries(cost)) {
             if (key !== 'multi') parts.push(`${key}${val}`);
@@ -2073,7 +2364,7 @@ class Game {
             if (targetRes) {
                 // 差し引き (Wは使わない)
                 player.resources[targetRes] = (player.resources[targetRes] || 0) - 3;
-                player.resources.W = (player.resources.W || 0) + 1;
+                this.gainResource(player, 'W', 1);
                 this.log(`${player.name} は ${targetRes}など3つ を W に変換しました。`);
             }
 
@@ -2092,15 +2383,25 @@ class Game {
                 player.resources.W = (player.resources.W || 0) - (2 - paid);
             }
             // 獲得
-            player.resources.W = (player.resources.W || 0) + 1;
+            this.gainResource(player, 'W', 1);
             this.log(`${player.name} は K2(またはW) を W に変換しました。`);
 
         } else if (effect === 'convert_W2_to_W3') {
             // Wを2個消費して3個にする（純増1）
             if (player.resources.W >= 2) {
                 player.resources.W -= 2;
-                player.resources.W = (player.resources.W || 0) + 3;
+                this.gainResource(player, 'W', 3);
                 this.log(`${player.name} は W2 を W3 に変換しました。`);
+            }
+
+        } else if (effect === 'convert_W2_to_FMK') {
+            // Wを2個消費してF+M+K各1個を得る
+            if (player.resources.W >= 2) {
+                player.resources.W -= 2;
+                this.gainResource(player, 'F', 1);
+                this.gainResource(player, 'M', 1);
+                this.gainResource(player, 'K', 1);
+                this.log(`${player.name} は W2 を F+M+K に変換しました。`);
             }
 
         } else if (effect === 'action_gain_1_choice') {
@@ -2144,51 +2445,12 @@ class Game {
      * @param {Object} player プレイヤー
      * @param {Object} cost コストオブジェクト
      */
+    /**
+     * コスト支払い実行
+     * GameCoreを使用
+     */
     payCost(player, cost) {
-        for (let key in cost) {
-            if (key === 'multi') {
-                // 同種3支払い ("same3")
-                const types = ['F', 'M', 'K'];
-                let paid = false;
-                // 優先度1: 純粋な資源だけで3つある場合
-                for (let t of types) {
-                    if (player.resources[t] >= 3) {
-                        player.resources[t] -= 3;
-                        paid = true; break;
-                    }
-                }
-                if (paid) return;
-
-                // 優先度2: Wを混ぜて3つにする
-                for (let t of types) {
-                    if (player.resources[t] + player.resources.W >= 3) {
-                        let neededW = 3 - player.resources[t];
-                        player.resources[t] = 0;
-                        player.resources.W -= neededW;
-                        paid = true; break;
-                    }
-                }
-
-                // 優先度3: Wだけで3つ払う
-                if (!paid && player.resources.W >= 3) {
-                    player.resources.W -= 3;
-                    paid = true;
-                }
-                return;
-            }
-
-            // 通常リソース支払い
-            let required = cost[key];
-            if (player.resources[key] >= required) {
-                player.resources[key] -= required;
-            } else {
-                // 不足分をWで補填
-                let avail = player.resources[key];
-                player.resources[key] = 0;
-                let borrowing = required - avail;
-                player.resources.W -= borrowing;
-            }
-        }
+        GameCore.payCost(player.resources, cost);
     }
 
     // 支払いモーダルを表示（人間プレイヤー用）
@@ -2282,20 +2544,29 @@ class Game {
         };
 
         const updatePaymentUI = () => {
-            selectorsDiv.querySelectorAll('.pay-count').forEach(span => {
+            selectorsDiv.querySelectorAll('.payment-val').forEach(span => {
                 const res = span.dataset.res;
                 span.textContent = paymentState[res] || 0;
             });
             // 合計チェック
-            let totalPaid = 0;
             let valid = false;
 
             if (cost.multi === 'same3') {
-                // 同種3のチェック
+                // 同種3のチェック: F/M/Kいずれか + W_sub で3以上
                 for (const r of ['F', 'M', 'K']) {
                     const direct = paymentState[r] || 0;
-                    const wild = paymentState[`W_as_${r}`] || 0;
-                    if (direct + wild >= 3) {
+                    const wSub = paymentState.W_sub || 0;
+                    if (direct + wSub >= 3) {
+                        valid = true;
+                        break;
+                    }
+                }
+            } else if (cost.multi === 'same4') {
+                // 同種4のチェック
+                for (const r of ['F', 'M', 'K']) {
+                    const direct = paymentState[r] || 0;
+                    const wSub = paymentState.W_sub || 0;
+                    if (direct + wSub >= 4) {
                         valid = true;
                         break;
                     }
@@ -2305,7 +2576,8 @@ class Game {
                 for (const key in cost) {
                     if (key === 'multi') continue;
                     const required = cost[key];
-                    const paid = (paymentState[key] || 0) + (paymentState[`W_as_${key}`] || 0);
+                    // 直接支払い + W_sub（代替）
+                    const paid = (paymentState[key] || 0) + (key !== 'W' ? (paymentState.W_sub || 0) : 0);
                     if (paid < required) {
                         valid = false;
                         break;
@@ -2316,60 +2588,75 @@ class Game {
         };
 
         const selectorsDiv = document.createElement('div');
-        selectorsDiv.className = 'selectors-grid';
+        selectorsDiv.style.marginTop = '15px';
 
-        ['F', 'M', 'K'].forEach(res => {
-            const box = document.createElement('div');
-            box.className = `pay-box pay-box-${res.toLowerCase()}`;
+        // 支払い対象資源リスト（Wコスト含む場合はWも追加）
+        const payResList = ['F', 'M', 'K'];
+        if (cost.W && cost.W > 0) payResList.push('W');
 
-            const label = document.createElement('div');
-            label.className = 'pay-label';
-            label.textContent = res;
-            box.appendChild(label);
+        const colorMap = { F: '#f39c12', M: '#e74c3c', K: '#3498db', W: '#22c55e' };
 
-            // 直接支払い
-            const directRow = document.createElement('div');
-            directRow.className = 'pay-row';
-            directRow.innerHTML = `<span class="pay-row-label">直接:</span> <button class="pay-minus" data-res="${res}">−</button> <span class="pay-count" data-res="${res}">0</span> <button class="pay-plus" data-res="${res}">+</button>`;
-            box.appendChild(directRow);
-
-            // W代替
-            const wildRow = document.createElement('div');
-            wildRow.className = 'pay-row';
-            wildRow.innerHTML = `<span class="pay-row-label">W代替:</span> <button class="pay-minus" data-res="W_as_${res}">−</button> <span class="pay-count" data-res="W_as_${res}">0</span> <button class="pay-plus" data-res="W_as_${res}">+</button>`;
-            box.appendChild(wildRow);
-
-            selectorsDiv.appendChild(box);
+        payResList.forEach(res => {
+            const row = document.createElement('div');
+            row.className = 'payment-row';
+            row.innerHTML = `
+                <span class="payment-label" style="color:${colorMap[res]}">${res}</span>
+                <div class="payment-controls">
+                    <button class="btn-stepper btn-minus" data-res="${res}">−</button>
+                    <span class="payment-val" data-res="${res}">${paymentState[res] || 0}</span>
+                    <button class="btn-stepper btn-plus" data-res="${res}">+</button>
+                </div>
+            `;
+            selectorsDiv.appendChild(row);
         });
+
+        // Wを代替支払いとして使う場合の行（Wトークン保有時）
+        if ((player.resources.W || 0) > 0 && !payResList.includes('W')) {
+            const wRow = document.createElement('div');
+            wRow.className = 'payment-row';
+            wRow.innerHTML = `
+                <span class="payment-label" style="color:${colorMap.W}">W (代替)</span>
+                <div class="payment-controls">
+                    <button class="btn-stepper btn-minus" data-res="W_sub">−</button>
+                    <span class="payment-val" data-res="W_sub">0</span>
+                    <button class="btn-stepper btn-plus" data-res="W_sub">+</button>
+                </div>
+            `;
+            selectorsDiv.appendChild(wRow);
+            paymentState.W_sub = 0;
+        }
 
         content.appendChild(selectorsDiv);
 
         // ボタンイベント
-        selectorsDiv.querySelectorAll('.pay-plus').forEach(btn => {
+        selectorsDiv.querySelectorAll('.btn-plus').forEach(btn => {
             btn.onclick = () => {
                 const res = btn.dataset.res;
-                const isWild = res.startsWith('W_as_');
+                const isWSub = (res === 'W_sub');
+                const actualRes = isWSub ? 'W' : res;
+                const stateKey = res;
 
-                if (isWild) {
-                    // W代替の場合: 使用済みWを計算して残りWが上限
-                    const usedW = (paymentState.W_as_F || 0) + (paymentState.W_as_M || 0) + (paymentState.W_as_K || 0);
-                    const availW = player.resources.W || 0;
-                    if (usedW < availW) {
-                        paymentState[res] = (paymentState[res] || 0) + 1;
+                // 上限チェック
+                const owned = player.resources[actualRes] || 0;
+                let usedOfThis = paymentState[res] || 0;
+
+                // W_subの場合、他のW_as_X用途での使用量もカウント
+                if (isWSub) {
+                    const usedW = (paymentState.W_as_F || 0) + (paymentState.W_as_M || 0) + (paymentState.W_as_K || 0) + (paymentState.W_sub || 0);
+                    if (usedW < owned) {
+                        paymentState[stateKey] = (paymentState[stateKey] || 0) + 1;
                         updatePaymentUI();
                     }
                 } else {
-                    // 直接支払いの場合: 所持資源が上限
-                    const owned = player.resources[res] || 0;
-                    if ((paymentState[res] || 0) < owned) {
-                        paymentState[res] = (paymentState[res] || 0) + 1;
+                    if (usedOfThis < owned) {
+                        paymentState[stateKey] = (paymentState[stateKey] || 0) + 1;
                         updatePaymentUI();
                     }
                 }
             };
         });
 
-        selectorsDiv.querySelectorAll('.pay-minus').forEach(btn => {
+        selectorsDiv.querySelectorAll('.btn-minus').forEach(btn => {
             btn.onclick = () => {
                 const res = btn.dataset.res;
                 if ((paymentState[res] || 0) > 0) {
@@ -2422,6 +2709,28 @@ class Game {
             return plan;
         }
 
+        if (cost.multi === 'same4') {
+            // 同種4を支払う
+            for (const r of ['F', 'M', 'K']) {
+                if ((player.resources[r] || 0) >= 4) {
+                    plan[r] = 4;
+                    return plan;
+                }
+            }
+            // ワイルドで補う
+            for (const r of ['F', 'M', 'K']) {
+                const avail = player.resources[r] || 0;
+                if (avail + (player.resources.W || 0) >= 4) {
+                    plan[r] = avail;
+                    plan[`W_as_${r}`] = 4 - avail;
+                    return plan;
+                }
+            }
+            // 全てワイルド
+            plan.W = 4;
+            return plan;
+        }
+
         // 通常コスト
         for (const key in cost) {
             if (key === 'multi') continue;
@@ -2445,7 +2754,7 @@ class Game {
                 if (this.stats) this.stats.resourcesSpent[key] += paymentPlan[key];
             }
         }
-        // ワイルドで代替した分
+        // ワイルドで代替した分 (旧形式: W_as_F, W_as_M, W_as_K)
         for (const key of ['F', 'M', 'K']) {
             const wildKey = `W_as_${key}`;
             if (paymentPlan[wildKey]) {
@@ -2453,118 +2762,83 @@ class Game {
                 if (this.stats) this.stats.resourcesSpent[wildKey] += paymentPlan[wildKey];
             }
         }
+        // 新形式: W_sub（代替支払い統合キー）
+        if (paymentPlan.W_sub) {
+            player.resources.W -= paymentPlan.W_sub;
+            if (this.stats) this.stats.resourcesSpent.W += paymentPlan.W_sub;
+        }
     }
 
     // チェーンビルドアクションを表示（人間プレイヤー用）
     showChainBuildActions(player, chainRemaining) {
-        console.log('[DEBUG] showChainBuildActions: called', { chainRemaining, playerName: player.name, handLength: player.hand.length });
+        console.log('[DEBUG] showChainBuildActions: called', { chainRemaining, playerName: player.name });
 
-        // まずUIを更新して古いMove/Buildボタンを消す（selectedCardがnullなので消える）
+        // UI更新（既存のアクションパネルはクリア）
         this.updateUI();
-        // ハイライトとコールバックを確実にクリア
         this.highlightNodes([], null);
-        this.highlightCallback = null;
 
-        this.dynamicActions.innerHTML = '';
-
-        const info = document.createElement('div');
-        info.innerHTML = `<strong>チェーン建設</strong>: 残り ${chainRemaining} 回`;
-        info.style.marginBottom = '10px';
-        this.dynamicActions.appendChild(info);
-
+        // 建設可能なカードを抽出
         const buildableCards = player.hand.filter(c => this.canBuild(player, c).canBuild);
-        console.log('[DEBUG] showChainBuildActions: buildable cards', buildableCards.map(c => c.name_jp));
 
         if (buildableCards.length === 0) {
-            const msg = document.createElement('div');
-            msg.textContent = '建設可能なカードがありません。';
-            msg.style.color = '#999';
-            this.dynamicActions.appendChild(msg);
-        } else {
-            // カード画像付きのグリッド表示
-            const cardGrid = document.createElement('div');
-            cardGrid.style.display = 'grid';
-            cardGrid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(100px, 1fr))';
-            cardGrid.style.gap = '8px';
-            cardGrid.style.maxHeight = '200px';
-            cardGrid.style.overflowY = 'auto';
-            cardGrid.style.padding = '5px';
-
-            buildableCards.forEach(card => {
-                const cardBtn = document.createElement('div');
-                cardBtn.className = 'chain-card-btn';
-                cardBtn.style.cursor = 'pointer';
-                cardBtn.style.border = '2px solid #ccc';
-                cardBtn.style.borderRadius = '8px';
-                cardBtn.style.padding = '5px';
-                cardBtn.style.textAlign = 'center';
-                cardBtn.style.background = 'var(--glass-bg, rgba(255,255,255,0.1))';
-                cardBtn.style.transition = 'transform 0.1s, border-color 0.1s';
-
-                // カード画像
-                const img = document.createElement('img');
-                img.src = `../cards/${card.id}.png`;
-                img.alt = card.name_jp;
-                img.style.width = '80px';
-                img.style.height = 'auto';
-                img.style.borderRadius = '4px';
-                img.onerror = () => { img.style.display = 'none'; };
-
-                // カード名
-                const name = document.createElement('div');
-                name.textContent = card.name_jp;
-                name.style.fontSize = '0.75rem';
-                name.style.marginTop = '4px';
-                name.style.whiteSpace = 'nowrap';
-                name.style.overflow = 'hidden';
-                name.style.textOverflow = 'ellipsis';
-
-                // コスト表示
-                const cost = document.createElement('div');
-                cost.textContent = this.formatCost(card.cost);
-                cost.style.fontSize = '0.65rem';
-                cost.style.color = '#888';
-
-                cardBtn.appendChild(img);
-                cardBtn.appendChild(name);
-                cardBtn.appendChild(cost);
-
-                // ホバー効果
-                cardBtn.onmouseenter = () => {
-                    cardBtn.style.transform = 'scale(1.05)';
-                    cardBtn.style.borderColor = 'var(--accent-color, #4CAF50)';
-                };
-                cardBtn.onmouseleave = () => {
-                    cardBtn.style.transform = 'scale(1)';
-                    cardBtn.style.borderColor = '#ccc';
-                };
-
-                cardBtn.onclick = () => {
-                    this.log(`${player.name} continues chain: Building ${card.name_jp}`);
-                    console.log('[DEBUG] showChainBuildActions onclick: chainRemaining before call =', chainRemaining, ', passing:', chainRemaining - 1);
-                    this.executeBuild(player, card, chainRemaining - 1);
-                };
-
-                cardGrid.appendChild(cardBtn);
-            });
-
-            this.dynamicActions.appendChild(cardGrid);
+            this.log(`${player.name} は建設可能なカードがないため、チェーン建設を終了します。`);
+            this.checkPostAction(player);
+            return;
         }
 
-        const btnSkip = document.createElement('button');
-        btnSkip.textContent = 'チェーンをスキップ';
-        btnSkip.className = 'btn-secondary';
-        btnSkip.style.marginTop = '15px';
-        btnSkip.style.width = '100%';
-        btnSkip.onclick = () => {
-            this.log(`${player.name} はチェーン建設をスキップしました。`);
-            this.checkPostAction(player);
-        };
-        this.dynamicActions.appendChild(btnSkip);
+        // モーダルを表示
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.style.display = 'flex';
 
-        // パネルを表示（updateUIで非表示になっている可能性があるため）
-        const panel = document.getElementById('action-panel');
-        if (panel) panel.style.display = 'block';
+        let cardsHtml = '';
+        buildableCards.forEach((card, idx) => {
+            // 元のhand配列内のインデックスを探す
+            const originalIdx = player.hand.indexOf(card);
+            cardsHtml += `
+                <div class="modal-card-item" onclick="window.game.handleChainBuildSelect(${originalIdx})">
+                    <img src="${card.image_src}" style="width:120px; cursor:pointer; border:2px solid transparent; border-radius:8px;">
+                    <div style="text-align:center; font-size:0.8rem; margin-top:5px; font-weight:bold;">${card.name_jp}</div>
+                    <div style="text-align:center; font-size:0.75rem; color:#666;">コスト: ${this.formatCost(card.cost)}</div>
+                </div>
+            `;
+        });
+
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width:900px;">
+                <h3>チェーン建設: 残り ${chainRemaining} 回</h3>
+                <p>建設するカードを選択してください。</p>
+                <div style="display:flex; gap:15px; flex-wrap:wrap; justify-content:center; margin-bottom:20px; max-height:400px; overflow-y:auto;">
+                    ${cardsHtml}
+                </div>
+                <div class="modal-buttons">
+                    <button onclick="window.game.closeChainBuildModal(true)" class="btn-secondary">建設を終了（スキップ）</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        // グローバルハンドラ設定
+        window.game.handleChainBuildSelect = (handIndex) => {
+            document.body.removeChild(modal);
+            delete window.game.handleChainBuildSelect;
+            delete window.game.closeChainBuildModal;
+
+            const card = player.hand[handIndex];
+            this.log(`${player.name} continues chain: Building ${card.name_jp}`);
+            this.executeBuild(player, card, chainRemaining - 1);
+        };
+
+        window.game.closeChainBuildModal = (isSkip) => {
+            if (isSkip) {
+                document.body.removeChild(modal);
+                delete window.game.handleChainBuildSelect;
+                delete window.game.closeChainBuildModal;
+
+                this.log(`${player.name} はチェーン建設をスキップしました。`);
+                this.checkPostAction(player);
+            }
+        };
     }
 
     /**
@@ -2682,10 +2956,6 @@ class Game {
         player.selectedCard = null;
         player.construction.push(card);
         player.lastAction = '建設';
-        // AIやシミュレーションモードではトースト抑制
-        if (!player.isAI && !this.simulationMode) {
-            this.playSFX('build');
-        }
 
         // チェーンビルドの処理
         // chainRemaining === -1 は初回建設を示すため、0として扱う
@@ -2773,37 +3043,237 @@ class Game {
      * 統計情報を更新しながらプレイヤーに資源を付与します
      */
     gainResource(player, type, amount = 1, source = 'other') {
-        if (!type) return;
+        if (!type || amount <= 0) return 0;
 
-        // 統計トラッキング
-        if (this.stats) {
-            if (type === 'FMK') {
-                ['F', 'M', 'K'].forEach(r => {
-                    this.stats.resourcesGained[r]++;
-                    if (this.stats.gainsBySource[source]) this.stats.gainsBySource[source][r]++;
-                });
-            } else if (this.stats.resourcesGained[type] !== undefined) {
-                this.stats.resourcesGained[type] += amount;
-                if (this.stats.gainsBySource[source]) this.stats.gainsBySource[source][type] += amount;
-            }
-        }
-
+        // 特殊タイプ 'Card' の処理
         if (type === 'Card') {
             this.drawCards(player, 1);
             this.log(`${player.name} はカードを引きました。`, true);
-            return;
+            return 0; // count as resource gain? maybe not for amount return
         }
+        // 特殊タイプ 'FMK' の処理
         if (type === 'FMK') {
             const pick = ['F', 'M', 'K'][Math.floor(Math.random() * 3)];
-            player.resources[pick] = (player.resources[pick] || 0) + 1;
-            this.log(`${player.name} は ${pick} を獲得しました (Pede effect)`, true);
-            return;
+            return this.gainResource(player, pick, 1, source);
         }
 
-        if (player.resources[type] !== undefined) {
-            player.resources[type] += amount;
-            this.log(`${player.name} は ${amount} <span class="res-tag ${type.toLowerCase()}">${type}</span> を獲得しました`, true);
+        let actualGain = 0;
+
+        if (type === 'W') {
+            // Wはサプライから取得 (有限)
+            if (this.roundTokens >= amount) {
+                actualGain = amount;
+                this.roundTokens -= amount;
+            } else {
+                actualGain = this.roundTokens;
+                this.roundTokens = 0;
+            }
+            if (actualGain > 0) {
+                player.resources.W = (player.resources.W || 0) + actualGain;
+            } else {
+                this.log(`${player.name} は W を獲得しようとしましたが、サプライが尽きていました。`);
+            }
+            // ゲーム終了チェック呼び出し
+            this.checkGameEnd();
+        } else {
+            // F/M/Kは通常加算 (無限)
+            if (player.resources[type] !== undefined) {
+                player.resources[type] += amount;
+                actualGain = amount;
+            }
         }
+
+        // ログ出力 (実際に獲得できた場合)
+        if (actualGain > 0) {
+            this.log(`${player.name} は ${actualGain} <span class="res-tag ${type.toLowerCase()}">${type}</span> を獲得しました`, true);
+        }
+
+        // 統計トラッキング
+        if (this.stats && actualGain > 0) {
+            if (this.stats.resourcesGained[type] !== undefined) {
+                this.stats.resourcesGained[type] += actualGain;
+                if (this.stats.gainsBySource[source]) {
+                    this.stats.gainsBySource[source][type] += actualGain;
+                }
+            }
+        }
+
+        // 資源上限チェック
+        this.checkResourceCap(player);
+
+        return actualGain;
+    }
+
+    /**
+     * 資源上限チェック
+     * 総資源数が10を超えている場合、破棄処理を実行
+     * @param {Object} player プレイヤー
+     */
+    checkResourceCap(player) {
+        const RESOURCE_CAP = 8;
+        const totalResources = this.getTotalResources(player);
+
+        if (totalResources > RESOURCE_CAP) {
+            const excessCount = totalResources - RESOURCE_CAP;
+            this.log(`${player.name} は資源上限(${RESOURCE_CAP})を超えました。${excessCount}個捨てる必要があります。(Wは上限に含みません)`, true);
+
+            if (player.isAI) {
+                // AIは自動で最も多い資源を捨てる
+                this.aiDiscardResources(player, excessCount);
+            } else if (this.isLocalPlayer(player)) {
+                // 人間プレイヤーは選択UI表示
+                this.showResourceDiscardModal(player, excessCount);
+            }
+        }
+    }
+
+    /**
+     * プレイヤーの総資源数を取得
+     * @param {Object} player プレイヤー
+     * @returns {number} 総資源数
+     */
+    getTotalResources(player) {
+        return (player.resources.F || 0) +
+            (player.resources.M || 0) +
+            (player.resources.K || 0);
+        // (player.resources.W || 0); // Wは上限に含まない
+    }
+
+    /**
+     * AI用：資源を自動で捨てる
+     * 最も多い資源から順に捨てる
+     * @param {Object} player AIプレイヤー
+     * @param {number} count 捨てる数
+     */
+    aiDiscardResources(player, count) {
+        for (let i = 0; i < count; i++) {
+            // 最も多い資源を選択
+            const types = ['F', 'M', 'K'];
+            let maxType = types[0];
+            let maxCount = player.resources[types[0]] || 0;
+
+            for (const t of types) {
+                if ((player.resources[t] || 0) > maxCount) {
+                    maxCount = player.resources[t];
+                    maxType = t;
+                }
+            }
+
+            if (maxCount > 0) {
+                player.resources[maxType]--;
+                this.log(`${player.name} は <span class="res-tag ${maxType.toLowerCase()}">${maxType}</span> を1個捨てました`);
+            }
+        }
+        this.updateUI();
+    }
+
+    /**
+     * 資源破棄モーダルを表示
+     * @param {Object} player プレイヤー
+     * @param {number} count 捨てる数
+     */
+    showResourceDiscardModal(player, count) {
+        const overlay = document.getElementById('payment-modal-overlay');
+        const content = overlay.querySelector('#payment-options');
+        const title = overlay.querySelector('h2');
+        const footer = overlay.querySelector('.modal-footer');
+
+        title.textContent = `資源を${count}個捨ててください`;
+        content.innerHTML = '';
+        footer.innerHTML = '';
+
+        // 現在の資源表示
+        const resInfo = document.createElement('div');
+        resInfo.className = 'res-info';
+        resInfo.innerHTML = `<strong>現在の資源:</strong> 
+            <span style="color:#f39c12">F:${player.resources.F || 0}</span> 
+            <span style="color:#e74c3c">M:${player.resources.M || 0}</span> 
+            <span style="color:#3498db">K:${player.resources.K || 0}</span> 
+            <span style="color:#22c55e">W:${player.resources.W || 0}</span>
+            <br><strong>合計(W除く):</strong> ${this.getTotalResources(player)} → ${8}にする`;
+        content.appendChild(resInfo);
+
+        // 捨てる資源の選択状態
+        const discardState = { F: 0, M: 0, K: 0, W: 0 };
+
+        // 各資源の選択UI
+        const types = ['F', 'M', 'K'];
+        const colors = { F: '#f39c12', M: '#e74c3c', K: '#3498db' };
+
+        const selectionDiv = document.createElement('div');
+        selectionDiv.style.marginTop = '15px';
+
+        types.forEach(t => {
+            if ((player.resources[t] || 0) > 0) {
+                const row = document.createElement('div');
+                row.className = 'payment-row';
+                row.innerHTML = `
+                    <span class="payment-label" style="color:${colors[t]}">${t}</span>
+                    <div class="payment-controls">
+                        <button class="btn-stepper btn-minus" data-res="${t}">−</button>
+                        <span class="payment-val" id="discard-${t}">0</span>
+                        <button class="btn-stepper btn-plus" data-res="${t}">+</button>
+                    </div>
+                `;
+                selectionDiv.appendChild(row);
+            }
+        });
+        content.appendChild(selectionDiv);
+
+        // 確認ボタン
+        const confirmBtn = document.createElement('button');
+        confirmBtn.className = 'btn-primary';
+        confirmBtn.textContent = `確定 (0/${count})`;
+        confirmBtn.disabled = true;
+        footer.appendChild(confirmBtn);
+
+        // 更新関数
+        const updateDiscardUI = () => {
+            const total = discardState.F + discardState.M + discardState.K;
+            confirmBtn.textContent = `確定 (${total}/${count})`;
+            confirmBtn.disabled = (total !== count);
+
+            types.forEach(t => {
+                const valEl = document.getElementById(`discard-${t}`);
+                if (valEl) valEl.textContent = discardState[t];
+            });
+        };
+
+        // イベントリスナー
+        selectionDiv.querySelectorAll('.btn-plus').forEach(btn => {
+            btn.onclick = () => {
+                const t = btn.dataset.res;
+                const total = discardState.F + discardState.M + discardState.K;
+                if (total < count && discardState[t] < (player.resources[t] || 0)) {
+                    discardState[t]++;
+                    updateDiscardUI();
+                }
+            };
+        });
+
+        selectionDiv.querySelectorAll('.btn-minus').forEach(btn => {
+            btn.onclick = () => {
+                const t = btn.dataset.res;
+                if (discardState[t] > 0) {
+                    discardState[t]--;
+                    updateDiscardUI();
+                }
+            };
+        });
+
+        // 確定処理
+        confirmBtn.onclick = () => {
+            types.forEach(t => {
+                player.resources[t] -= discardState[t];
+                if (discardState[t] > 0) {
+                    this.log(`${player.name} は <span class="res-tag ${t.toLowerCase()}">${t}</span> を${discardState[t]}個捨てました`);
+                }
+            });
+            overlay.classList.add('hidden');
+            this.updateUI();
+        };
+
+        overlay.classList.remove('hidden');
     }
 
     removeCardFromHand(player, card) {
@@ -2840,12 +3310,44 @@ class Game {
     }
 
     /**
+     * ワープチェック
+     * ターン終了時にワープマスにいた場合、もう一方のマスに自動移動
+     * @param {Object} player プレイヤー
+     */
+    checkWarp(player) {
+        const currentNode = mapNodes.find(n => n.id === player.location);
+        if (currentNode && currentNode.type === 'warp' && currentNode.warpTo) {
+            const warpTarget = currentNode.warpTo;
+            const targetNode = mapNodes.find(n => n.id === warpTarget);
+
+            this.log(`${player.name} はワープ！${currentNode.name} → ${targetNode ? targetNode.name : warpTarget}へ移動！`, true);
+
+            // ノードスタック更新
+            if (this.nodeStacks[player.location]) {
+                this.nodeStacks[player.location] = this.nodeStacks[player.location].filter(id => id !== player.id);
+            }
+            if (!this.nodeStacks[warpTarget]) {
+                this.nodeStacks[warpTarget] = [];
+            }
+            this.nodeStacks[warpTarget].push(player.id);
+
+            // プレイヤー位置を更新
+            player.location = warpTarget;
+
+            // 地図更新
+            this.renderMap();
+        }
+    }
+
+    /**
      * ターン終了実行
      * 手札補充、次プレイヤーへの移行、ラウンド終了判定を行います
      */
     performTurnEnd(targetPlayerId) {
         const player = this.players[targetPlayerId];
         if (player) {
+            // ワープチェックはfinishMoveで即時実行されるため、ここでは不要（無限ループ回避）
+            // this.checkWarp(player);
             this.replenishPlayerHand(player);
         }
 
@@ -3062,17 +3564,8 @@ class Game {
         if (this.stats) console.log("Final Game Statistics:", this.stats);
     }
 
+    // VP_FORMULAS は vp_formulas.js で定義（外部ファイル）
 
-    // VP計算用のフォーミュラテーブル（vp_logic: 'variable' のカード用）
-    static VP_FORMULAS = {
-        // カード4,8はvp_logic:'static'のため除外（静的VP: 4=2VP, 8=1VP）
-        15: (p, c) => c.culture,     // 良き文化: 1 × 文化数
-        16: (p, c) => c.industry,    // 古きを思い: 1 × 産業数
-        17: (p, c) => c.politics     // 筆兵無傾: 1 × 政治数
-    };
-
-    // 周回トークンVPテーブル（インデックス = トークン数）
-    static ROUND_TOKEN_VP = [0, 1, 3, 6, 10];
 
     /**
      * 勝利点(VP)計算
@@ -3092,6 +3585,8 @@ class Game {
             politics: validCards.filter(c => c.type === 'politics').length
         };
 
+        const cardScores = [];
+
         // 2. カード別VP計算
         validCards.forEach(c => {
             let cardScore = 0;
@@ -3101,7 +3596,7 @@ class Game {
                 if (recordStats && this.stats) this.stats.totalVPBySource.static += cardScore;
             } else if (c.vp_logic === 'variable') {
                 // データ駆動: VP_FORMULASテーブルから関数を取得
-                const formula = Game.VP_FORMULAS[c.id];
+                const formula = VP_FORMULAS[c.id];
                 if (formula) {
                     cardScore = formula(player, counts);
                 } else if (c.vp_formula) {
@@ -3112,6 +3607,7 @@ class Game {
             }
 
             score += cardScore;
+            if (cardScore > 0) cardScores.push(cardScore);
 
             if (recordStats && this.stats) {
                 if (!this.stats.cardsBuilt[c.id]) {
@@ -3122,14 +3618,13 @@ class Game {
             }
         });
 
-        // 3. 周回トークンVP（テーブルルックアップ）
-        const tokens = player.roundTokens || 0;
-        const tokenVp = tokens < 5
-            ? Game.ROUND_TOKEN_VP[tokens]
-            : tokens * 3;
+        // 3. W成長ボーナス: 建物とWのペア数 * 3
+        const tokens = player.resources.W || 0;
+        const buildings = validCards.length;
+        const wScore = Math.min(tokens, buildings) * 3;
+        score += wScore;
 
-        score += tokenVp;
-        if (recordStats && this.stats) this.stats.totalVPBySource.round_tokens = tokenVp;
+        if (recordStats && this.stats) this.stats.totalVPBySource.round_tokens = wScore;
 
         return score;
     }
@@ -3139,16 +3634,115 @@ class Game {
      * 文字列で定義されたVP計算式をパースして値を返します
      */
     parseVpFormula(formula, player, counts) {
-        if (formula.includes('min(culture, industry, politics)')) {
-            return 2 * Math.min(counts.culture, counts.industry, counts.politics);
+        if (formula.includes('min(culture, industry, politics)') || formula.includes('min(culture,industry,politics)')) {
+            return 3 * Math.min(counts.culture, counts.industry, counts.politics);
         }
-        if (formula.includes('round_tokens')) {
-            return 2 * (player.roundTokens || 0);
+        if (formula.includes('round_tokens') || formula.includes('count(round_tokens)')) {
+            return 2 * (player.resources.W || 0);
         }
-        if (formula.includes('politics')) return counts.politics;
-        if (formula.includes('culture')) return counts.culture;
-        if (formula.includes('industry')) return counts.industry;
+
+        // New syntax: 2 * count(type_cards)
+        if (formula.includes('count(culture_cards)')) return 2 * counts.culture;
+        if (formula.includes('count(industry_cards)')) return 2 * counts.industry;
+        if (formula.includes('count(politics_cards)')) return 2 * counts.politics;
+
+        if (formula.includes('politics')) return 2 * counts.politics;
+        if (formula.includes('culture')) return 2 * counts.culture;
+        if (formula.includes('industry')) return 2 * counts.industry;
         return 0;
+    }
+
+
+    // --- リセット機能 ---
+
+    /**
+     * リセットアクション (C: Reset)
+     * 手札を全て捨て、3枚引き直してターン終了
+     */
+    executeReset(player) {
+        if (this.mainActionTaken) {
+            console.warn("Reset action blocked: Action already taken");
+            this.showToast("すでにアクションを実行済みです", "warning");
+            return;
+        }
+        this.log(`${player.name} はリセットを選択しました。`);
+
+        // 手札を全て捨てる
+        while (player.hand.length > 0) {
+            const card = player.hand.pop();
+            this.discardPile.push(card);
+        }
+
+        // 3枚引く
+        for (let i = 0; i < 3; i++) {
+            if (this.deck.length === 0) this.reshuffleDeck();
+            if (this.deck.length > 0) {
+                player.hand.push(this.deck.pop());
+            }
+        }
+
+        this.log(`${player.name} は手札をリフレッシュしました。`);
+        this.mainActionTaken = true;
+
+        this.checkPostAction(player);
+        this.updateUI();
+    }
+
+    /**
+     * リセットボタン表示
+     */
+    showResetButton(player) {
+        // 静的ボタン制御 (index.htmlに追加されたボタンを使用)
+        const staticBtn = document.getElementById('btn-reset-turn');
+        if (staticBtn) {
+            const canReset = (this.phase === 'execute' && this.isLocalPlayer(player) && !this.mainActionTaken && !player.isAI);
+
+            if (canReset) {
+                staticBtn.disabled = false;
+                staticBtn.style.opacity = '1';
+                staticBtn.style.cursor = 'pointer';
+                staticBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    this.showConfirmModal("リセットしますか？", "手札を全て捨て、山札から3枚引き直します。このターンは終了となります。", () => {
+                        this.executeReset(player);
+                    });
+                };
+            } else {
+                staticBtn.disabled = true;
+                staticBtn.style.opacity = '0.5';
+                staticBtn.style.cursor = 'not-allowed';
+            }
+            return; // 静的ボタンがあればここで終了
+        }
+
+        // 旧実装: dynamicActionsへの動的追加（静的ボタンがない場合のフォールバック）
+
+        // ローカルプレイヤーかつ実行フェーズかつ未アクション時のみ
+        if (this.phase !== 'execute' || !this.isLocalPlayer(player) || this.mainActionTaken || player.isAI) return;
+
+        // dynamicActionsに追加するが、重複しないようにする
+        if (document.getElementById('btn-reset-turn')) return;
+
+        const resetBtn = document.createElement('button');
+        resetBtn.id = 'btn-reset-turn';
+        resetBtn.className = 'action-btn reset-btn';
+        resetBtn.style.backgroundColor = '#7f8c8d';
+        resetBtn.style.color = '#fff';
+        resetBtn.style.marginTop = '10px';
+        resetBtn.style.width = '100%';
+        resetBtn.textContent = '🔄 リセット (手札交換)';
+
+        resetBtn.onclick = (e) => {
+            e.stopPropagation();
+            this.showConfirmModal("リセットしますか？", "手札を全て捨て、山札から3枚引き直します。このターンは終了となります。", () => {
+                this.executeReset(player);
+            });
+        };
+
+        // dynamicActionsに追加
+        if (this.dynamicActions) {
+            this.dynamicActions.appendChild(resetBtn);
+        }
     }
 
     // --- UIレンダリング関連 ---
@@ -3174,7 +3768,6 @@ class Game {
 
                 this.showConfirmModal(`${card.name_jp} の効果を使用しますか？`, `(${this.getConversionLabel(card.effect)})`, () => {
                     this.applyConversionEffect(player, card);
-                    this.playSFX('convert');
                     this.updateUI();
 
                     // ステータスに応じてUIを再表示
@@ -3241,65 +3834,6 @@ class Game {
     }
 
     /**
-     * 効果音(SFX)再生
-     * Web Audio APIを使用した簡易シンセサイザー音と、視覚的なトースト通知を行います
-     * @param {string} type 音の種類 ('move', 'convert', 'build')
-     */
-    playSFX(type) {
-        // トーストメッセージ表示（'move'は頻度が高いのでスキップ）
-        if (type !== 'move') {
-            const toast = document.createElement('div');
-            toast.className = 'sfx-toast';
-            let msg = "ACTION!";
-            if (type === 'convert') msg = "CONVERSION!";
-            if (type === 'build') msg = "BUILD!";
-            toast.textContent = msg;
-
-            if (type === 'build') toast.style.backgroundColor = 'rgba(231, 76, 60, 0.9)'; // 赤
-            document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 1000);
-        }
-
-        try {
-            const AudioContext = window.AudioContext || window.webkitAudioContext;
-            if (AudioContext) {
-                const ctx = new AudioContext();
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-
-                const now = ctx.currentTime;
-                if (type === 'convert') {
-                    // キラリとした高音
-                    osc.type = 'sine';
-                    osc.frequency.setValueAtTime(880, now);
-                    osc.frequency.exponentialRampToValueAtTime(440, now + 0.1);
-                } else if (type === 'build') {
-                    // 建設的な打撃音
-                    osc.type = 'triangle';
-                    osc.frequency.setValueAtTime(220, now);
-                    osc.frequency.linearRampToValueAtTime(440, now + 0.1);
-                } else if (type === 'move') {
-                    // 移動の風切り音
-                    osc.type = 'sine';
-                    osc.frequency.setValueAtTime(150, now);
-                    osc.frequency.linearRampToValueAtTime(300, now + 0.1);
-                } else {
-                    osc.type = 'square';
-                    osc.frequency.setValueAtTime(440, now);
-                }
-
-                gain.gain.setValueAtTime(0.1, now);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + (type === 'move' ? 0.15 : 0.2));
-
-                osc.start();
-                osc.stop(now + 0.2);
-            }
-        } catch (e) { }
-    }
-
-    /**
      * UI全体の更新
      * プレイヤーの手札、ボード、リソース、フェーズ表示などを再描画します
      */
@@ -3344,6 +3878,18 @@ class Game {
                 actionPrompt.style.display = 'block';
             }
         }
+
+        // --- Header Info Update ---
+        const roundEl = document.getElementById('current-round');
+        if (roundEl) roundEl.textContent = this.round;
+
+        const wSupplyEl = document.getElementById('w-supply');
+        if (wSupplyEl) {
+            wSupplyEl.textContent = this.roundTokens;
+        } else {
+            console.warn('#w-supply not found');
+        }
+        // --------------------------
 
         if (!this.humanArea || !this.opponentsArea) return; // 安全チェック
         this.humanArea.innerHTML = '';
@@ -3399,6 +3945,9 @@ class Game {
                     <button class="btn-secondary" style="flex:1; padding:5px; font-size:0.9rem;" ${!canBuild ? 'disabled' : ''} onclick="window.game.executeBuild(window.game.players[${idx}], window.game.players[${idx}].selectedCard)">
                         建てる
                     </button>
+                    <button class="action-btn" style="flex:1; padding:5px; font-size:0.9rem; background-color:#e74c3c; color:white; border:none; border-radius:4px; font-weight:bold;" onclick="event.stopPropagation(); window.game.showConfirmModal('リセットしますか？', '手札を全て捨て、山札から3枚引き直します。このターンは終了となります。', () => window.game.executeReset(window.game.players[${idx}]))">
+                        リセット
+                    </button>
                 </div>
                 <div style="font-size:0.75rem; color:#666;">コスト: ${this.formatCost(card.cost)}</div>
             </div>
@@ -3418,6 +3967,38 @@ class Game {
     `;
                 }
             }
+
+            // ----------------------------------------------------------------
+            // 変換アクションボタン (Construction Effects)
+            let conversionHtml = '';
+            // 手番プレイヤーかつ実行フェーズかつメインアクション未実行時
+            if (isLocal && idx === this.currentPlayerIndex && this.phase === 'execute' && !this.mainActionTaken) {
+                const converters = p.construction.filter(c => c && c.effect && !c.usedThisTurn && c.effect.startsWith('convert_'));
+                if (converters.length > 0) {
+                    conversionHtml += `
+                         <div style="margin-top:10px; border-top:1px dashed #ccc; padding-top:5px;">
+                             <div style="font-size:0.75rem; font-weight:bold; color:#666; margin-bottom:4px;">変換スキル</div>
+                             <div style="display:flex; flex-wrap:wrap; gap:5px;">
+                     `;
+                    converters.forEach(c => {
+                        const label = this.getConversionLabel(c.effect);
+                        const canUse = this.canConvert(p, c);
+                        const btnStyle = canUse ?
+                            "background:#fafafa; border:1px solid #aaa; border-radius:4px; padding:3px 8px; font-size:0.75rem; cursor:pointer;" :
+                            "background:#eee; border:1px solid #ddd; border-radius:4px; padding:3px 8px; font-size:0.75rem; cursor:not-allowed; opacity:0.6;";
+
+                        conversionHtml += `
+                             <button style="${btnStyle}" 
+                                     ${!canUse ? 'disabled' : ''}
+                                     onclick="event.stopPropagation(); window.game.applyConversionEffect(window.game.players[${idx}], window.game.players[${idx}].construction.find(x => x.id === ${c.id})); window.game.updateUI();">
+                                 ${c.name_jp} <span style="font-size:0.7em; color:#555;">(${label})</span>
+                             </button>
+                         `;
+                    });
+                    conversionHtml += `</div></div>`;
+                }
+            }
+            // ----------------------------------------------------------------
 
             // プレイヤー色に対応する背景色マップ（infoBlock用）
             const infoBgColors = {
@@ -3440,10 +4021,10 @@ class Game {
         <span class="res-tag m" title="Material">M: ${p.resources.M}</span>
         <span class="res-tag k" title="K-Culture">K: ${p.resources.K}</span>
         <span class="res-tag w" title="Wild">W: ${p.resources.W}</span>
-        <span class="res-tag rt" title="Round Tokens">RT: ${p.roundTokens || 0}</span>
         <span style="background:#eee; padding:2px 8px; border-radius:6px; font-size:0.8rem; margin-left:auto;" title="Hand Limit">🃏 ${handLimit}</span>
     </div>
     ${infoActionsHtml}
+    ${conversionHtml}
 </div>
             `;
 
@@ -3483,13 +4064,8 @@ class Game {
             container.appendChild(div);
         });
 
-        const roundEl = document.getElementById('current-round');
-        if (roundEl) roundEl.textContent = this.round;
         const phaseEl = document.getElementById('current-phase');
         if (phaseEl) phaseEl.textContent = this.phase;
-
-        const rtHeaderEl = document.getElementById('remaining-rt');
-        if (rtHeaderEl) rtHeaderEl.textContent = this.roundTokens;
 
         // ボタン管理
         if (this.nextPhaseBtn) {
@@ -3497,14 +4073,15 @@ class Game {
             if (this.phase === 'plan' || this.phase === 'execute') {
                 // 計画と実行中はnextPhaseBtnを非表示（実行中は何もしない）
                 this.nextPhaseBtn.style.display = 'none';
-                if (panel && this.dynamicActions.innerHTML.trim() === '') {
-                    panel.style.display = 'none';
+                // リセットボタンなどが含まれるため、Executeフェーズではパネルを表示したままにする
+                if (panel) {
+                    panel.style.display = 'flex';
                 }
             } else {
                 this.nextPhaseBtn.style.display = '';
                 this.nextPhaseBtn.disabled = true;
                 this.nextPhaseBtn.textContent = 'フェイズ: ' + this.phase;
-                if (panel) panel.style.display = 'block';
+                if (panel) panel.style.display = 'flex';
 
                 // 計画フェーズでない場合はクイック確認ボタンを削除
                 const existing = document.getElementById('quick-confirm-btn');
@@ -3513,6 +4090,8 @@ class Game {
         }
 
         this.renderMap();
+
+
     }
 
     /**

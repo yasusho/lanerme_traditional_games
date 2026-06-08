@@ -1,48 +1,93 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
     <title>AIL LIME Batch Simulation</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; padding: 20px; background: #1a1a2e; color: #eee; }
-        h1 { color: #4ecdc4; }
-        .controls { margin: 20px 0; }
-        button { padding: 10px 20px; font-size: 16px; cursor: pointer; background: #4ecdc4; border: none; border-radius: 5px; margin-right: 10px; }
-        button:disabled { background: #666; cursor: not-allowed; }
-        #progress { margin: 20px 0; font-size: 18px; }
-        #results { background: #16213e; padding: 15px; border-radius: 8px; max-height: 400px; overflow-y: auto; }
-        pre { margin: 0; white-space: pre-wrap; font-size: 12px; }
-        .stat-box { display: inline-block; background: #0f3460; padding: 10px 15px; margin: 5px; border-radius: 5px; }
-        .stat-label { font-size: 12px; color: #aaa; }
-        .stat-value { font-size: 24px; font-weight: bold; color: #4ecdc4; }
+        body { font-family: 'Segoe UI', sans-serif; padding: 20px; background: #f0f2f5; color: #333; }
+        h1 { color: #2c3e50; }
+        .controls { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; background: #3498db; color: white; border: none; border-radius: 4px; margin-right: 10px; }
+        button:hover { background: #2980b9; }
+        button:disabled { background: #bdc3c7; cursor: not-allowed; }
+        button.secondary { background: #e74c3c; }
+        
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .chart-card {
+            background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .chart-card h3 { margin-top: 0; font-size: 16px; color: #333; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        
+        .stat-box { display: inline-block; background: white; padding: 10px 15px; margin: 5px; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .stat-label { font-size: 12px; color: #7f8c8d; }
+        .stat-value { font-size: 24px; font-weight: bold; color: #2c3e50; }
+        
+        #resultsText { display: none; } /* Hide raw text log */
     </style>
 </head>
 <body>
     <h1>AIL LIME バッチシミュレーション</h1>
     
     <div class="controls">
-        <label>シミュレーション回数: <input type="number" id="simCount" value="100" min="1" max="1000"></label>
-        <label style="margin-left:20px;">プレイヤー数: 
+        <label>Player Count: 
             <select id="playerCount">
                 <option value="2">2人</option>
                 <option value="3">3人</option>
-                <option value="4">4人</option>
-                <option value="5" selected>5人</option>
+                <option value="4" selected>4人</option>
+                <option value="5">5人</option>
             </select>
         </label>
-        <button id="startBtn" onclick="startBatchSimulation()">シミュレーション開始</button>
-        <button id="downloadBtn" onclick="downloadResults()" disabled>JSON ダウンロード</button>
+        <button id="startBtn" onclick="startBatchSimulation()">Start 5000 Games</button>
+        <button id="downloadBtn" onclick="downloadResults()" disabled>Download JSON</button>
+        <button id="clearBtn" onclick="clearResults()">Clear Memory</button>
+    </div>
+
+    
+    <div id="rlStatus" style="display:none; background:#e8f5e9; padding:10px; border-radius:5px; margin-bottom:10px;">
+        <strong>RL Training:</strong> <span id="rlProgress">準備中...</span>
     </div>
     
     <div id="progress">準備完了</div>
     
     <div id="summary" style="display:none;">
-        <h3>サマリー</h3>
-        <div id="summaryStats"></div>
+        <div id="summaryStats" style="margin-bottom: 20px;"></div>
+        
+        <div id="dashboard" class="dashboard-grid">
+            <div class="chart-card">
+                <h3>Strategy Win Rate</h3>
+                <canvas id="chartStrategyWin"></canvas>
+            </div>
+            <div class="chart-card">
+                <h3>Average VP Breakdown</h3>
+                <canvas id="chartStrategyVP"></canvas>
+            </div>
+            <div class="chart-card">
+                <h3>Seat Advantage</h3>
+                <canvas id="chartSeatWin"></canvas>
+            </div>
+            <div class="chart-card">
+                <h3>Strategy: Avg Rounds & W Tokens</h3>
+                <canvas id="chartStrategyAux"></canvas>
+            </div>
+            <div class="chart-card" style="grid-column: span 2;">
+                <h3>Map Node Visits & Value</h3>
+                <canvas id="chartMapHeatmap"></canvas>
+            </div>
+            <div class="chart-card" style="grid-column: span 2;">
+                <h3>Average Resource Volume per Turn</h3>
+                <canvas id="chartResourceVolume"></canvas>
+            </div>
+        </div>
     </div>
     
     <div id="results">
-        <pre id="resultsText">結果がここに表示されます...</pre>
+        <div id="resultsText"></div>
     </div>
 
     <!-- Hidden game container -->
@@ -57,7 +102,9 @@
 
     <script src="map_data.js"></script>
     <script src="cards.js"></script>
-    <!-- game.js is NOT loaded - HeadlessGame is self-contained -->
+    <script src="game_core.js"></script>
+
+    <!-- HeadlessGame uses GameCore for shared logic with game.js -->
     <script>
         let allResults = [];
         let isRunning = false;
@@ -66,7 +113,7 @@
             if (isRunning) return;
             isRunning = true;
             
-            const simCount = parseInt(document.getElementById('simCount').value);
+            const simCount = 5000;
             const playerCount = parseInt(document.getElementById('playerCount').value);
             
             document.getElementById('startBtn').disabled = true;
@@ -85,7 +132,7 @@
                 }
                 
                 // Allow UI to update
-                await new Promise(r => setTimeout(r, 10));
+                await new Promise(r => setTimeout(r, 0)); // reduced wait for speed
             }
             
             document.getElementById('progress').textContent = `完了！${simCount} 回のシミュレーションが終了しました`;
@@ -93,7 +140,7 @@
             document.getElementById('downloadBtn').disabled = false;
             
             displaySummary();
-            document.getElementById('resultsText').textContent = JSON.stringify(allResults, null, 2);
+            // document.getElementById('resultsText').textContent = "完了しました。詳細データはJSONをダウンロードして確認してください。";
             isRunning = false;
         }
 
@@ -111,84 +158,98 @@
             });
         }
 
+
+
         class HeadlessGame {
             constructor(playerCount, gameId) {
                 this.gameId = gameId;
                 this.playerCount = playerCount;
-                this.players = [];
-                this.deck = [];
-                this.discardPile = [];
-                this.roundTokens = playerCount * 3;
-                this.round = 1;
-                this.phase = 'plan';
-                this.startPlayerIndex = 0;
-                this.currentPlayerIndex = 0;
-                this.nodeStacks = {};
-                this.maxRounds = 50; // Safety limit
-                this.peakResources = { F: 0, M: 0, K: 0, W: 0, total: 0 }; // Peak resource tracking
                 
-                this.initPlayers();
-                this.createDeck();
-                this.shuffleDeck();
-                this.dealInitialCards();
-            }
+                this.round = 1;
+                // ルール上、ゲームはWサプライ(roundTokens)が0になるまで続く
+                // 最大ラウンド制限はない。無限ループ防止のための安全上限のみ設定
+                this.maxRounds = 30; // UPDATED to 30 as requested
+                
+                this.roundTokens = 3 * this.playerCount; 
+                this.endingRound = null;
 
-            initPlayers() {
-                const colors = ['white', 'blue', 'black', 'red', 'yellow'];
-                for (let i = 0; i < this.playerCount; i++) {
+                // Players Setup
+                this.players = [];
+                const strategies = ['Builder', 'Looper', 'Balanced'];
+                for (let i = 0; i < playerCount; i++) {
+                    const strategy = strategies[i % 3]; 
                     this.players.push({
-                        id: i,
-                        name: `Player ${i + 1}`,
-                        color: colors[i % colors.length],
-                        location: 1,
+                        id: `AI-${i + 1}`,
+                        name: `AI-${i + 1} (${strategy})`,
+                        aiStrategy: strategy,
                         hand: [],
                         construction: [],
-                        resources: { F: 0, M: 0, K: 0, W: 0 },
-                        selectedCard: null,
-                        roundTokens: 0,
-                        isAI: true,
-                        aiStrategy: this.getRandomAIStrategy()
+                        resources: { F: 0, M: 0, K: 0, W: 2 }, // 初期Wトークン2個
+                        location: 1, 
+                        color: ['red', 'blue', 'green', 'yellow'][i]
                     });
                 }
                 
-                // Initialize node stacks
-                // mapNodes is global
-                this.nodeStacks = {};
-                mapNodes.forEach(n => this.nodeStacks[n.id] = []);
-                // this.nodeStacks[1] = this.players.map(p => p.id); // Removed as per game.js logic
-            }
-
-            getRandomAIStrategy() {
-                const strategies = ['Balanced', 'Hoarder', 'Rusher', 'Naive'];
-                // Weighted random? Or equal? Equal for now.
-                return strategies[Math.floor(Math.random() * strategies.length)];
-            }
-
-            createDeck() {
-                cardsData.forEach(cardDef => {
-                    for (let i = 0; i < cardDef.count; i++) {
-                        this.deck.push({ ...cardDef });
-                    }
+                // Deck Setup
+                this.deck = this.createDeck();
+                this.discardPile = [];
+                
+                // Shuffle & Deal
+                this.shuffle(this.deck);
+                this.players.forEach(p => {
+                    this.drawCards(p, 5); 
+                });
+                
+                this.currentPlayerIndex = 0; // Start with Player 1 (Index 0)
+                this.startPlayerIndex = 0;   // Correct start player tracking
+                
+                // Stats
+                this.nodeStats = {}; 
+                for (let i=1; i<=14; i++) this.nodeStats[i] = { visits: 0, cardsGained: 0, resGained: 0 };
+                
+                this.resourceHistory = []; 
+                this.peakResources = { F:0, M:0, K:0, W:0, total:0 };
+                
+                // Card Usage Stats: Now per Strategy
+                this.cardUsageStats = {
+                    'Builder': {},
+                    'Looper': {},
+                    'Balanced': {}
+                };
+                
+                // Loop tracking for diagnostics
+                this.loopCount = 0;
+                
+                // Game end flag - set when W supply is depleted
+                this.gameEndTriggered = false;
+                
+                // Node Stacks
+                this.nodeStacks = {}; 
+                this.players.forEach(p => {
+                    if (!this.nodeStacks[p.location]) this.nodeStacks[p.location] = [];
+                    this.nodeStacks[p.location].push(p.id);
                 });
             }
 
-            shuffleDeck() {
-                for (let i = this.deck.length - 1; i > 0; i--) {
+            createDeck() {
+                // Clone cardsData
+                return cardsData.map(c => ({ ...c, usedThisTurn: false }));
+            }
+
+            shuffle(array) {
+                for (let i = array.length - 1; i > 0; i--) {
                     const j = Math.floor(Math.random() * (i + 1));
-                    [this.deck[i], this.deck[j]] = [this.deck[j], this.deck[i]];
+                    [array[i], array[j]] = [array[j], array[i]];
                 }
             }
-
-            dealInitialCards() {
-                this.players.forEach(p => this.drawCards(p, 3));
-            }
-
+            
             drawCards(player, count) {
                 for (let i = 0; i < count; i++) {
                     if (this.deck.length === 0) {
-                        this.deck = [...this.discardPile];
+                        if (this.discardPile.length === 0) break; // Empty
+                        this.deck = this.discardPile;
                         this.discardPile = [];
-                        this.shuffleDeck();
+                        this.shuffle(this.deck);
                     }
                     if (this.deck.length > 0) {
                         player.hand.push(this.deck.pop());
@@ -196,50 +257,143 @@
                 }
             }
 
-            run(callback) {
-                while (this.roundTokens > 0 && this.round < this.maxRounds) {
-                    this.runRound();
+            // This method was previously part of the original constructor's initialization logic
+            // and is now removed as the new constructor handles all initialization directly.
+            // initializeGame() {
+            //     const colors = ['white', 'blue', 'black', 'red', 'yellow'];
+            //     const aiStrategies = ['Balanced', 'Builder', 'Looper'];
+
+            //     for (let i = 0; i < this.playerCount; i++) {
+            //         const strat = aiStrategies[Math.floor(Math.random() * aiStrategies.length)];
+            //         this.players.push({
+            //             id: i,
+            //             name: `AI-${i + 1} (${strat})`,
+            //             color: colors[i % colors.length],
+            //             location: 1,
+            //             hand: [],
+            //             construction: [],
+            //             resources: { F: 0, M: 0, K: 0, W: 0 },
+            //             selectedCard: null,
+            //             roundTokens: 0,
+            //             isAI: true,
+            //             aiStrategy: strat
+            //         });
+            //     }
+
+            //     this.createDeck();
+            //     this.shuffleDeck();
+            //     this.players.forEach(p => this.drawCards(p, 3));
+            // }
+
+            // createDeck() {
+            //     this.deck = [];
+            //     cardsData.forEach(card => {
+            //         for (let i = 0; i < card.count; i++) {
+            //             // Unique instance for safety
+            //             this.deck.push({ ...card, instanceId: Math.random().toString(36).substr(2, 9) });
+            //         }
+            //     });
+            // }
+
+            // shuffleDeck() {
+            //     for (let i = this.deck.length - 1; i > 0; i--) {
+            //         const j = Math.floor(Math.random() * (i + 1));
+            //         [this.deck[i], this.deck[j]] = [this.deck[j], this.deck[i]];
+            //     }
+            // }
+
+            // drawCards(player, count) {
+            //     for (let i = 0; i < count; i++) {
+            //         if (this.deck.length === 0) {
+            //             if (this.discardPile.length > 0) {
+            //                 this.deck = [...this.discardPile];
+            //                 this.discardPile = [];
+            //                 this.shuffleDeck();
+            //             } else {
+            //                 break;
+            //             }
+            //         }
+            //         player.hand.push(this.deck.pop());
+            //     }
+            // }
+
+            recordCardUsage(player, card, type) {
+                // type: 'build' or 'move'
+                const strat = player.aiStrategy;
+                if (!this.cardUsageStats[strat]) this.cardUsageStats[strat] = {};
+                
+                if (!this.cardUsageStats[strat][card.id]) {
+                    this.cardUsageStats[strat][card.id] = { name: card.name_jp, build: 0, move: 0 };
                 }
-                callback(this.getResult());
+                if (type === 'build') this.cardUsageStats[strat][card.id].build++;
+                else if (type === 'move') this.cardUsageStats[strat][card.id].move++;
             }
 
+            // --- AI Logic (Match Game.js) ---
+
             runRound() {
-                // Plan Phase - All AI select cards
+                // 1. Plan Phase
                 this.players.forEach(p => {
                     if (p.hand.length > 0) {
                         p.selectedCard = this.selectBestCard(p);
+                    } else {
+                        p.selectedCard = null;
                     }
                 });
 
-                // Execute Phase
-                for (let turn = 0; turn < this.playerCount; turn++) {
-                    this.currentPlayerIndex = (this.startPlayerIndex + turn) % this.playerCount;
-                    const player = this.players[this.currentPlayerIndex];
+                // 2. Execute Phase
+                for (let i = 0; i < this.playerCount; i++) {
+                    const idx = (this.startPlayerIndex + i) % this.playerCount;
+                    const player = this.players[idx];
+                    
+                    // Reset turn flags
+                    player.construction.forEach(c => c.usedThisTurn = false);
+
                     if (player.selectedCard) {
                         this.executeAITurn(player);
+                    } else {
+                        // No valid card/move found. Force Reset to prevent infinite loops (stuck state).
+                        this.forceReset(player);
                     }
-                }
-                // Track peak resources after each player's turn
-                this.updatePeakResources();
-                
-                // Check if game end was triggered in this round (Equal turns)
-                if (this.gameEndTriggered) {
-                     this.endGame();
-                     return;
-                }
 
-                // Replenish Phase
-                this.players.forEach(p => {
+                    // Replenish Logic (Standard Game Rule: Draw to 3 + Extra at end of turn)
+                    // Note: original batch_sim did checkResourceCap here? 
+                    // Let's stick to Game.js: performTurnEnd does warp check, startReplenishPhase does draw.
+                    
+                    // Emulate Game.js performTurnEnd
+                    this.performTurnEnd(player);
+                    
+                    // Emulate Game.js startReplenishPhase (simplified for immediate execution)
                     let drawExtra = 0;
-                    p.construction.forEach(c => { if (c.draw_extra) drawExtra += c.draw_extra; });
+                    player.construction.forEach(c => { if (c.draw_extra) drawExtra += c.draw_extra; });
                     const limit = 3 + drawExtra;
-                    const need = limit - p.hand.length;
-                    if (need > 0) this.drawCards(p, need);
-                });
+                    const need = limit - player.hand.length;
+                    if (need > 0) this.drawCards(player, need);
+                }
+                
+                this.updatePeakResources();
 
+                // 3. Round End
                 this.startPlayerIndex = (this.startPlayerIndex + 1) % this.playerCount;
-                // this.drawCards(this.players[this.startPlayerIndex], 1); // DISABLED: Testing without start player bonus
-                this.round++;
+                
+                // Track resource volume for this round
+                let currentTotals = { F: 0, M: 0, K: 0, W: 0 };
+                this.players.forEach(p => {
+                    currentTotals.F += p.resources.F || 0;
+                    currentTotals.M += p.resources.M || 0;
+                    currentTotals.K += p.resources.K || 0;
+                    currentTotals.W += p.resources.W || 0;
+                });
+                this.resourceHistory.push(currentTotals);
+
+                // ゲーム終了判定 - gameEndTriggered はWサプライ枯渇時にgainResourceで設定される
+                if (this.gameEndTriggered || this.roundTokens <= 0) {
+                    console.log(`[DEBUG] GAME END TRIGGERED! roundTokens=${this.roundTokens}, endingRound=${this.round}`);
+                    this.endingRound = this.round; // Save the actual ending round
+                    this.round = this.maxRounds + 1; // End Loop
+                } else {
+                    this.round++;
+                }
             }
 
             selectBestCard(player) {
@@ -248,8 +402,8 @@
 
                 player.hand.forEach(card => {
                     const score = this.calculateCardScore(player, card);
-                    // Add small random noise to break ties (-5 to +5)
-                    const noise = Math.random() * 10 - 5;
+                    // 以前よりも大きなノイズ (-20 to +20) を加えて計画性を削ぐ
+                    const noise = Math.random() * 40 - 20;
                     const finalScore = score + noise;
 
                     if (finalScore > maxScore) {
@@ -262,462 +416,859 @@
 
             calculateCardScore(player, card) {
                 let score = 0;
-                let canBuild = this.canBuild(player, card);
+                const totalRes = (player.resources.F || 0) + (player.resources.M || 0) + (player.resources.K || 0) + (player.resources.W || 0);
+                const { canBuild } = this.canBuild(player, card);
 
-                // Check if buildable via conversion
-                if (!canBuild) {
-                    const convCards = player.construction.filter(c => c.effect && c.effect.startsWith('convert_'));
-                    if (convCards.length > 0) {
-                        // Simple simulation: Can we build if we convert?
-                        // NOTE: This reuses logic from executeAIConversions but returns boolean
-                        if (this.canBuildWithConversion(player, card, convCards)) {
-                             canBuild = true;
-                             // Slight penalty compared to direct build to prefer direct if possible? 
-                             // Or maybe bonus because we use our engine?
-                             // Let's treat it as buildable but maybe 10% less attractive? 
-                             // Actually, if it's the *only* way to build, score += 1000 is huge anyway.
-                        }
-                    }
-                }
+                const isBuilder = player.aiStrategy === 'Builder';
+                const isLooper = player.aiStrategy === 'Looper';
+                const isBalanced = player.aiStrategy === 'Balanced';
+                
+                const isLate = this.round >= 8;
+
+                // --- A. 建設スコア ---
+                let buildScore = -Infinity;
 
                 if (canBuild) {
-                    score += 1000; // Base score for being buildable
-
-                    // VP Value
-                    let vpVal = card.vp || 0;
-                    if (card.vp_logic === 'variable') vpVal = 2; 
-                    score += vpVal * 20;
-
-                    // Production Value
-                    if (card.production) score += 50;
-
-                    // Effect Value
-                    if (card.effect) score += 30;
-                } else {
-                    // Cannot build, prioritize utility as move
-                    score += (card.move || 0) * 10;
-                    if (card.move >= 3) score += 20;
-                    if (card.move_resource && card.move_resource.length > 0) score += 30;
-                    if (card.move === 0) score -= 50;
-
-                     // --- AI PERSONALITY LOGIC ---
-                    const strategy = player.aiStrategy || 'Naive';
+                    buildScore = 0;
                     
-                    // Card Value
-                    let cardValue = 0;
-                    if (card.vp >= 2 || (card.vp_logic && card.vp_logic !== 'none')) cardValue += 50;
-                    if (card.production) cardValue += 30;
-                    if (card.cost && (card.cost.F + card.cost.M + card.cost.K >= 4)) cardValue += 40;
-
-                    if (strategy === 'Balanced') {
-                        score -= cardValue * 2; 
-                        if (card.move >= 3) score += 10;
-                    } else if (strategy === 'Hoarder') {
-                        score -= cardValue * 10; 
-                    } else if (strategy === 'Rusher') {
-                        if (card.move >= 3) score += 100;
+                    // 基礎点
+                    if (isBuilder) buildScore += 50000;
+                    else if (isLooper) {
+                        // Looper: 建設は控えめだが、絶対ダメではない
+                        buildScore -= 200; 
+                        
+                        // キーカード補正
+                        if (card.id === 18) buildScore += 20000; // アイルの道 (ID:18): 絶対建てるマン
+                        if (card.chain_build) buildScore += 2000; // チェーンは回れるので好き
+                        if (card.draw_extra > 0) buildScore += 3000; // 移動札確保のためにドロー強化
+                        if (card.effect && card.effect.startsWith('convert_')) buildScore += 2000; // 変換効果も好き
                     }
-                }
-                return score;
-            }
+                    else buildScore += 500; 
 
-            canBuild(player, card) {
-                if (!card.cost) return false;
-                if (card.cost.multi === 'same3') {
-                    const max = Math.max(player.resources.F, player.resources.M, player.resources.K);
-                    return max + player.resources.W >= 3;
+                    // VP価値
+                    let vpVal = card.vp || 0;
+                    if (card.vp_logic === 'variable') {
+                        const built = player.construction;
+                        const culture = built.filter(c => c.type === 'culture').length;
+                        const industry = built.filter(c => c.type === 'industry').length;
+                        const politics = built.filter(c => c.type === 'politics').length;
+                        const wCount = player.resources.W || 0;
+
+                        if (card.id === 15) vpVal = culture * 2; 
+                        else if (card.id === 16) vpVal = industry * 2; 
+                        else if (card.id === 17) vpVal = politics * 2; 
+                        else if (card.id === 18) vpVal = wCount * 2; 
+                        else if (card.id === 19) vpVal = Math.min(culture, industry, politics) * 3; 
+                        else vpVal = 2.5;
+                    }
+                    
+                    if (isBuilder) buildScore += vpVal * 200; 
+                    else buildScore += vpVal * 50;
+
+                    // 産出・効果・ドロー: Builderのみ重視
+                    if (isBuilder) {
+                        if (card.production) buildScore += 1000;
+                        if (card.effect) {
+                             buildScore += 500;
+                             if (card.effect.startsWith('convert_')) buildScore += 2000; // 変換効果を優先（W獲得のため）
+                        }
+                        if (card.draw_extra) buildScore += 800;
+                        if (card.chain_build) {
+                            buildScore += 3500; // Increased base preference for chain cards
+                            
+                            // Check for Combo Potential (Chain Build)
+                            const hasCombineTarget = player.hand.some(other => other !== card && this.canBuild(player, other).canBuild);
+                            if (hasCombineTarget) {
+                                buildScore += 5000; // Large bonus for actual combo possibility
+                            }
+                        }
+
+                        // --- Synergy Bonus (組み合わせ評価) ---
+                        // 既に持っている「変数VPカード」の点数を底上げするカードなら評価アップ
+                        const builtVarCards = player.construction.filter(c => c.vp_logic === 'variable');
+                        builtVarCards.forEach(vc => {
+                             let synergy = 0;
+                             if (vc.id === 15 && card.type === 'culture') synergy = 2; // 文化x2
+                             else if (vc.id === 16 && card.type === 'industry') synergy = 2; // 産業x2
+                             else if (vc.id === 17 && card.type === 'politics') synergy = 2; // 政治x2
+                             else if (vc.id === 19 && ['culture', 'industry', 'politics'].includes(card.type)) {
+                                 // 3色セットの場合、最も少ない色（ボトルネック）を補うカードかどうか
+                                 // (calculateCardScore内ですでにculture, industry, politics変数が定義されている前提)
+                                 const minCount = Math.min(culture, industry, politics);
+                                 const currentCounts = { 'culture': culture, 'industry': industry, 'politics': politics };
+                                 
+                                 // ボトルネック(最小枚数)の色であれば価値が高い
+                                 if (currentCounts[card.type] === minCount) {
+                                     synergy = 4; // セット完成に直結する
+                                 }
+                             }
+                             
+                             // シナジーボーナス加算 (VP換算 * 重み)
+                             if (synergy > 0) {
+                                 buildScore += synergy * 400; 
+                             }
+                        });
+    
+                        // 逆に、これから「変数VPカード」を建てようとしている場合の「将来性」評価（手札シナジー）
+                        if (card.vp_logic === 'variable') {
+                             let potential = 0;
+                             // 手札にある対象カード枚数 * 2VP 程度の期待値を加算
+                             if (card.id === 15) potential = player.hand.filter(h => h.type === 'culture').length * 2;
+                             else if (card.id === 16) potential = player.hand.filter(h => h.type === 'industry').length * 2;
+                             else if (card.id === 17) potential = player.hand.filter(h => h.type === 'politics').length * 2;
+                             else if (card.id === 19) {
+                                 // セット用の簡易判定: 色の種類数
+                                 const typesInHand = new Set(player.hand.map(h => h.type).filter(t => ['culture','industry','politics'].includes(t)));
+                                 potential = typesInHand.size * 1.5;
+                             }
+                             
+                             if (potential > 0) buildScore += potential * 100;
+                        }
+                    }
+
+                    // W消費ペナルティ
+                    let neededW = 0;
+                    if (card.cost) {
+                        if (card.cost.W) neededW += card.cost.W;
+                        ['F', 'M', 'K'].forEach(r => {
+                            let diff = (card.cost[r] || 0) - (player.resources[r] || 0);
+                            if (diff > 0) neededW += diff;
+                        });
+                    }
+
+                    if (isLooper) {
+                        // LooperのW消費ペナルティ（ただしVP効率が良い、またはアイルの道(18)なら許容）
+                        if (neededW > 0) {
+                            if (card.id === 18) {
+                                // アイルの道: ペナルティなし（むしろ推奨）
+                            } else if (vpVal >= 5) {
+                                // 高得点カード: 軽微なペナルティ
+                                buildScore -= neededW * 200; 
+                            } else {
+                                // その他: 重いペナルティ
+                                buildScore -= neededW * 2000;
+                            }
+                        }
+                    }
+                    // Builderペナルティなし
                 }
-                let deficit = 0;
-                for (let r in card.cost) {
-                    if (r === 'multi') continue;
-                    const needed = card.cost[r] - (player.resources[r] || 0);
-                    if (needed > 0) deficit += needed;
+
+                // --- B. 移動スコア ---
+                let moveScore = 0;
+                const steps = card.move;
+
+                if (steps > 0) {
+                    const reachable = this.getReachableNodes(player.location, steps);
+                    let maxNodeScore = -Infinity;
+
+                    // Wanted
+                    const wantedRes = new Set();
+                    player.hand.forEach(h => {
+                        if (h.cost) {
+                             ['F', 'M', 'K'].forEach(r => {
+                                 if ((player.resources[r] || 0) < (h.cost[r] || 0)) wantedRes.add(r);
+                             });
+                        }
+                    });
+
+                    reachable.forEach(targetId => {
+                        let nodeScore = 0;
+                        const node = mapNodes.find(n => n.id === targetId);
+                        const path = this.findPath(player.location, targetId, steps);
+
+                        // Looper基礎点: 移動自体が好き
+                        if (isLooper) nodeScore += 2000;
+                        if (this.checkPathForLoop(path)) {
+                            if (this.roundTokens > 0) {
+                                // Wトークンの価値評価（Double VPルール）
+                                // 現在のW数 < 建物数 + 2 程度なら価値が高い
+                                const wCount = player.resources.W || 0;
+                                const bCount = player.construction.length;
+                                
+                                let wVal = 0;
+                                // 期待値: 平均2.5VP程度と仮定して、x1000スケールで2500
+                                if (wCount <= bCount + 1) {
+                                    wVal = 2500;
+                                    if (isLooper) wVal += 2000; // Looperはさらに積極的
+                                    if (isLate) wVal += 1000;
+                                } else {
+                                    wVal = 500; // 余ってくると価値減
+                                }
+
+                                if (this.roundTokens <= 5) wVal += 3000; // 枯渇前ボーナス
+
+                                if (isLooper) nodeScore += 40000; // Looperバイアス
+                                if (isBalanced) nodeScore += 2000;
+                                
+                                nodeScore += wVal;
+                            }
+                        }
+
+                        // 2. 資源獲得
+                        const nodeRes = node.resource;
+                        let isUseful = false;
+                        if (nodeRes === 'FMK' || nodeRes === 'W') isUseful = true;
+                        else if (nodeRes && wantedRes.has(nodeRes)) isUseful = true;
+
+                        if (isUseful) {
+                            if (isBuilder) nodeScore += 5000; 
+                            else if (isLooper) nodeScore += 100;
+                            else nodeScore += 500;
+                        } else if (nodeRes) {
+                            if (isBuilder) nodeScore += 500;
+                        }
+
+                        // 3. 特殊マス & Distance Heuristic
+                        if (targetId === 12 || targetId === 14) { 
+                            if (isLooper) nodeScore += 20000;
+                            if (isBuilder) nodeScore -= 500; 
+                        }
+                        if (targetId === 5 && player.hand.length >= 2) { 
+                            if (isLooper) nodeScore += 10000;
+                        }
+
+                        // NEW: Distance Heuristic for Looper
+                        // Guide AI towards Node 1 (Start/Loop point) even if it can't loop this turn
+                        if (isLooper) {
+                            const dist = this.getDistToStart(targetId);
+                            // Max graph dist is roughly 15.
+                            // The closer to 1, the better.
+                            nodeScore += (20 - dist) * 1000;
+                        }
+
+                        if (nodeScore > maxNodeScore) maxNodeScore = nodeScore;
+                    });
+
+                    moveScore = maxNodeScore;
+                    
+                    // カード犠牲コスト
+                    if (isBuilder) {
+                        if (canBuild) moveScore -= 50000; 
+                        if (card.vp > 0) moveScore -= card.vp * 1000;
+                    }
+
+                } else {
+                    moveScore = -Infinity;
                 }
-                return player.resources.W >= deficit;
+
+                return Math.max(buildScore, moveScore);
             }
 
             executeAITurn(player) {
                 const card = player.selectedCard;
-                
-                // Use conversions first
+                if (!card) return;
+
+                // Free Action: Conversions
                 this.executeAIConversions(player);
+
+                const { canBuild } = this.canBuild(player, card);
+                let action = 'move';
+
+                // Check if Reset might be beneficial
+                const hasBuildableCards = player.hand.some(c => this.canBuild(player, c).canBuild);
+                const bestMoveInHand = Math.max(...player.hand.map(c => c.move || 0));
                 
-                if (this.canBuild(player, card)) {
+                // Reset Condition Refined:
+                // 1. No buildable cards
+                // 2. Hand has cards (at least 2, saving 1 might be strategic)
+                // 3. Worst case: moves are tiny (<=1) OR we are just stuck with high cost cards
+                
+                let shouldReset = !hasBuildableCards && player.hand.length >= 2 && bestMoveInHand <= 1;
+                
+                // Also reset if we have full hand but can't do anything meaningful (e.g. all moves lead to bad spots, though hard to calc here)
+                if (!hasBuildableCards && player.hand.length >= 3 && bestMoveInHand <= 2) shouldReset = true;
+
+                if (shouldReset && Math.random() < 0.3) {
+                    // C: Reset - 手札をすべて捨てて3枚引く
+                    action = 'reset';
+                } else if (canBuild) {
+                    // Compare build vs move score using the same logic as calculateCardScore
+                    const totalRes = (player.resources.F || 0) + (player.resources.M || 0) + (player.resources.K || 0);
+                    const wCount = player.resources.W || 0;
+                    const buildingCount = player.construction.length;
+                    
+                    const isLate = this.round >= 8;
+                    
+                    // --- Build Score ---
+                    let buildScore = 0;
+                    
+                    // 1. VP Estimation
+                    let vpVal = card.vp || 0;
+                    if (card.vp_logic === 'variable') {
+                        const counts = {
+                            culture: player.construction.filter(c => c.type === 'culture').length,
+                            industry: player.construction.filter(c => c.type === 'industry').length,
+                            politics: player.construction.filter(c => c.type === 'politics').length
+                        };
+                        if (card.id === 15) vpVal = counts.culture * 2;
+                        else if (card.id === 16) vpVal = counts.industry * 2;
+                        else if (card.id === 17) vpVal = counts.politics * 2;
+                        else if (card.id === 18) vpVal = wCount * 2;
+                        else if (card.id === 19) vpVal = Math.min(counts.culture, counts.industry, counts.politics) * 3;
+                        else vpVal = 3;
+                    }
+                    
+                    // VP Weight: Late game is critical
+                    let vpWeight = isLate ? 150 : 100;
+                    if (player.aiStrategy === 'Builder') vpWeight += 50;
+                    
+                    buildScore += vpVal * vpWeight;
+
+                    // 2. Production (Early game value)
+                    if (card.production && !isLate) {
+                        const remaining = 12 - this.round;
+                        // Approx 40 points per resource production over remaining rounds
+                        let prodVal = 0;
+                        for (let k in card.production) if (typeof card.production[k] === 'number') prodVal += card.production[k];
+                        buildScore += prodVal * remaining * 40;
+                    }
+                    
+                    // Base score for building (action efficiency)
+                    buildScore += 300;
+                    if (player.aiStrategy === 'Builder') buildScore += 1000; // Bias
+
+                    // Resource Overflow Prevention
+                    if (totalRes >= 8) buildScore += 500;
+
+                    // W usage bonus (if W is abundant and building is needed to score W)
+                    if (wCount > buildingCount) buildScore += 200;
+
+
+                    // --- Move Score ---
+                    let moveScore = 0;
+                    const steps = card.move;
+                    if (steps > 0) {
+                        const reachable = this.getReachableNodes(player.location, steps);
+                        reachable.forEach(tid => {
+                            let nodeScore = 0;
+                            const path = this.findPath(player.location, tid, steps);
+                            const node = mapNodes.find(n => n.id === tid);
+                            
+                            // Loop Bonus (W Token)
+                            // Loop Bonus (W Token)
+                            if (this.checkPathForLoop(path)) {
+                                const wCount = player.resources.W || 0;
+                                const bCount = player.construction.length;
+                                
+                                let wVal = 100;
+                                // Double VPルール評価
+                                if (wCount <= bCount + 1) {
+                                    wVal = 2500; // 高価値
+                                } else {
+                                    wVal = 500; // 低価値
+                                }
+                                
+                                // Late Game Rush (Tokens <= 5)
+                                if (this.roundTokens <= 5) wVal += 5000;
+                                
+                                // Looper strategy
+                                if (player.aiStrategy === 'Looper') wVal += 5000;
+                                // Builder strategy
+                                if (player.aiStrategy === 'Builder') {
+                                    wVal += 1000; 
+                                }
+                                
+                                if (isLate) wVal += 1000;
+                                nodeScore += wVal;
+                            }
+                            
+                            // Resource Gain
+                            if (node && node.resource) {
+                                // Need check
+                                let resVal = 100;
+                                if (node.resource === 'FMK') {
+                                    if (totalRes < 4) resVal = 250; // Desperate for resources
+                                    else if (totalRes >= 7) resVal = 20; // Don't need more
+                                } else if (node.resource === 'W') {
+                                    resVal = 200;
+                                }
+                                nodeScore += resVal;
+                            }
+                            
+                            // Warp Node (Strategic position)
+                            if (tid === 12 || tid === 14) nodeScore += 150;
+                            
+                            if (nodeScore > moveScore) moveScore = nodeScore;
+                        });
+                    }
+
+                    // Decision: build only if buildScore > moveScore
+                    if (buildScore > moveScore) {
+                        action = 'build';
+                    } else {
+                        action = 'move';
+                    }
+                }
+
+                if (action === 'reset') {
+                    // C: リセット - 手札をすべて捨てて3枚引く
+                    player.hand.forEach(c => this.discardPile.push(c));
+                    player.hand = [];
+                    player.selectedCard = null;
+                    this.drawCards(player, 3);
+                } else if (action === 'build') {
+                    // Track card usage per strategy
+                    const strat = player.aiStrategy;
+                    if (!this.cardUsageStats[strat][card.id]) {
+                        this.cardUsageStats[strat][card.id] = { name: card.name_jp, build: 0, move: 0 };
+                    }
+                    this.cardUsageStats[strat][card.id].build++;
                     this.executeBuild(player, card);
                 } else {
-                    this.executeMove(player, card);
+                    // Move - Track card usage per strategy
+                    const strat = player.aiStrategy;
+                    if (!this.cardUsageStats[strat][card.id]) {
+                        this.cardUsageStats[strat][card.id] = { name: card.name_jp, build: 0, move: 0 };
+                    }
+                    this.cardUsageStats[strat][card.id].move++;
+                    this.discardPile.push(card);
+                    this.removeFromHand(player, card);
+                    player.selectedCard = null;
+
+                    const steps = card.move;
+                    if (steps === 0) {
+                        this.finishMove(player, player.location, card);
+                        return;
+                    }
+
+                    const reachable = this.getReachableNodes(player.location, steps);
+                    if (reachable.length === 0) {
+                         this.finishMove(player, player.location, card);
+                    } else {
+                        // Choose best target - similar logic to calculateCardScore
+                        // Choose best target - similar logic to calculateCardScore
+                        const scoredTargets = reachable.map(targetId => {
+                            let score = 0;
+                            const path = this.findPath(player.location, targetId, steps);
+                            const node = mapNodes.find(n => n.id === targetId);
+                            const isLate = this.round >= 8; // DEFINE HERE
+                            
+                            // Loop Bonus in Action Execution (SYNCED with calculateCardScore)
+                            if (this.checkPathForLoop(path)) {
+                                const wCount = player.resources.W || 0;
+                                const bCount = player.construction.length;
+                                
+                                let wVal = 100;
+                                // Double VPルール評価
+                                if (wCount <= bCount + 1) {
+                                    wVal = 2500; 
+                                } else {
+                                    wVal = 500; 
+                                }
+
+                                if (this.roundTokens <= 5) wVal += 5000;
+                                if (player.aiStrategy === 'Looper') wVal += 5000;
+                                if (player.aiStrategy === 'Builder') wVal += 1000;
+                                if (isLate) wVal += 1000;
+                                score += wVal;
+                                
+                                if (this.gameId === 0) console.log(`[LOOP FOUND] Player ${player.name} path:`, path);
+                            }
+                            
+                            // Resource value
+                            if (node.resource === 'FMK' || node.resource === 'W') score += 500;
+                            else if (node.resource) {
+                                score += 100;
+                                if (node.resource === 'K') score += 50; 
+                            }
+
+                            if (targetId === 12 || targetId === 14) score += 500;
+                            
+                            // Distance bonus logic using proper Graph BFS
+                            const dist = this.getDistToStart(targetId);
+                            if (player.aiStrategy === 'Looper') {
+                                score += (20 - dist) * 1000;
+                            } else {
+                                // For others, weak bias forward
+                                score += (20 - dist) * 10;
+                            }
+
+                            return { id: targetId, score };
+                        });
+                        
+                        scoredTargets.sort((a,b) => b.score - a.score);
+                        const bestTarget = scoredTargets[0].id;
+                        
+                        // Debug: Log when player is near the loop point
+                        const finalPath = this.findPath(player.location, bestTarget, steps);
+                        if (this.gameId === 0 && (player.location >= 8 || bestTarget === 1)) {
+                            console.log(`[LOOP DEBUG] From ${player.location} to ${bestTarget}, path=${JSON.stringify(finalPath)}, hasLoop=${this.checkPathForLoop(finalPath)}`);
+                        }
+                        
+                        if (this.checkPathForLoop(finalPath)) {
+                            // Loop Detected - gain W from supply and track
+                            this.loopCount++;
+                            this.gainResource(player, 'W', 1, 'loop');
+                            console.log(`[LOOP!] Round ${this.round}: ${player.name} completed loop! Tokens left: ${this.roundTokens}`);
+                        }
+
+                        // Update Stacks
+                        // Update Stacks
+                        const passengers = this.getPassengers(player); // ensure passengers is defined
+                        this.updateNodeStacks(player, bestTarget, passengers);
+                        this.finishMove(player, bestTarget, card, passengers);
+                    }
                 }
-                
+            }
+
+            executeBuild(player, card, chainRemaining = -1) {
+                // Last minute safety check
+                const { canBuild } = this.canBuild(player, card);
+                if (!canBuild && chainRemaining === -1) { // Only check for initial build, chain builds might rely on pre-check or logic flow
+                    console.error(`[AI ERROR] Insufficient resources for ${player.name} to build ${card.name_jp}`, player.resources, card.cost);
+                    // Fallback to Reset to recover
+                    this.forceReset(player);
+                    return;
+                }
+
+                this.payBuildCost(player, card);
+                this.removeFromHand(player, card);
                 player.selectedCard = null;
+                player.construction.push({ ...card, builtAt: this.round });
+
+                // Chain Build Logic
+                let newChain = chainRemaining;
+                if (chainRemaining === -1) newChain = 0;
+                if (card.chain_build) newChain += card.chain_build;
+
+                if (newChain > 0 && player.hand.length > 0) {
+                    const buildables = player.hand.filter(c => this.canBuild(player, c).canBuild);
+                    if (buildables.length > 0) {
+                         // Pick intelligent card
+                         buildables.sort((a, b) => this.calculateCardScore(player, b) - this.calculateCardScore(player, a));
+                         const next = buildables[0];
+                         this.executeBuild(player, next, newChain - 1);
+                    }
+                }
             }
 
             executeAIConversions(player) {
                 const targetCard = player.selectedCard;
-                if (!targetCard || this.canBuild(player, targetCard)) return;
-
-                const convCards = player.construction.filter(c => c.effect && c.effect.startsWith('convert_'));
+                if (!targetCard || this.canBuild(player, targetCard).canBuild) return;
                 
+                const convCards = player.construction.filter(c => c && c.effect && c.effect.startsWith('convert_'));
                 let madeProgress = true;
-                let iterations = 0;
-                while (madeProgress && iterations < 10) {
+                let limit = 0;
+                while(madeProgress && limit < 10) {
                     madeProgress = false;
-                    iterations++;
-
-                    for (const card of convCards) {
-                        if (!this.canConvert(player, card)) continue;
-                        if (card.usedThisTurn) continue; // Skip used cards
-
-                        const effect = card.effect;
-                        const tempRes = { ...player.resources };
-                        let appliedSimulation = false;
-
-                        if (effect === 'convert_same3_to_W') {
-                             for (const r of ['F', 'M', 'K']) {
-                                 if ((tempRes[r] || 0) >= 3) {
-                                     tempRes[r] -= 3;
-                                     tempRes.W = (tempRes.W || 0) + 1;
-                                     appliedSimulation = true;
-                                     break;
-                                 }
-                             }
-                        } else if (effect === 'convert_K2_to_W') {
-                             if ((tempRes.K || 0) >= 2) {
-                                 tempRes.K -= 2;
-                                 tempRes.W = (tempRes.W || 0) + 1;
-                                 appliedSimulation = true;
-                             }
-                        } else if (effect === 'convert_W2_to_W3') {
-                                // Updated: W2 -> W3
-                                if ((tempRes.W || 0) >= 2) {
-                                     tempRes.W -= 2;
-                                     tempRes.W = (tempRes.W || 0) + 3;
-                                     appliedSimulation = true;
-                                }
-                        } else if (effect === 'convert_KMF_to_W') {
-                            if ((tempRes.K || 0) >= 1 && (tempRes.M || 0) >= 1 && (tempRes.F || 0) >= 1) {
-                                 tempRes.K--; tempRes.M--; tempRes.F--;
-                                 tempRes.W = (tempRes.W || 0) + 1;
-                                 appliedSimulation = true;
-                            }
-                        }
-
-                        if (appliedSimulation) {
-                            const fakePlayer = { ...player, resources: tempRes };
-                            if (this.canBuild(fakePlayer, targetCard)) {
-                                this.applyConversion(player, card);
-                                card.usedThisTurn = true; // Mark as used
-                                madeProgress = true;
-                                break;
-                            }
+                    limit++;
+                    for (let c of convCards) {
+                        if (this.canConvert(player, c)) {
+                            this.applyConversionEffect(player, c);
+                            madeProgress = true;
+                            if (this.canBuild(player, targetCard).canBuild) return;
                         }
                     }
                 }
             }
 
-            canBuildWithConversion(player, targetCard, convCards) {
-                 // Simulate if we can build targetCard using any of convCards
-                 // Simple greedy approach (same as executeAIConversions)
-                 // Copy the logic or reuse? Since we can't easily extract to shared standalone function without refactoring,
-                 // we duplicate the logic for safety in this HTML file context.
-                 
-                 let simulatedRes = { ...player.resources };
-                 // We don't need full loop, just "is it possible?"
-                 // Deep search is expensive. Shallow search (single conversion) is likely enough for 90% cases.
-                 // Let's support up to 2 conversions depth.
-                 
-                 for (let i=0; i<2; i++) { // Max depth 2
-                     let changed = false;
-                     for (const card of convCards) {
-                         const effect = card.effect;
-                         // Check raw condition on simulatedRes
-                         // Note: canConvert uses player.resources directly, so we need manual check or mock player
-                         let possible = false;
-                         
-                         // Manual check used in executeAIConversions simulation
-                         if (effect === 'convert_same3_to_W') {
-                             if (simulatedRes.F>=3 || simulatedRes.M>=3 || simulatedRes.K>=3) possible=true; 
-                         } else if (effect === 'convert_K2_to_W') {
-                             if (simulatedRes.K>=2) possible=true;
-                         } else if (effect === 'convert_W2_to_W3') {
-                             if (simulatedRes.W>=2) possible=true;
-                         } else if (effect === 'convert_KMF_to_W') {
-                             if (simulatedRes.F>=1 && simulatedRes.M>=1 && simulatedRes.K>=1) possible=true;
-                         }
+            // --- Helper Methods (Using GameCore) ---
 
-                         if (possible) {
-                             // Apply
-                             if (effect === 'convert_same3_to_W') {
-                                 for (const r of ['F', 'M', 'K']) {
-                                     if (simulatedRes[r] >= 3) { simulatedRes[r]-=3; simulatedRes.W=(simulatedRes.W||0)+1; break; }
-                                 }
-                             } else if (effect === 'convert_K2_to_W') {
-                                 simulatedRes.K-=2; simulatedRes.W=(simulatedRes.W||0)+1;
-                             } else if (effect === 'convert_W2_to_W3') {
-                                 simulatedRes.W-=2; simulatedRes.W=(simulatedRes.W||0)+3;
-                             } else if (effect === 'convert_KMF_to_W') {
-                                 simulatedRes.F--; simulatedRes.M--; simulatedRes.K--; simulatedRes.W=(simulatedRes.W||0)+1;
-                             }
-                             changed = true;
-                             
-                             // Check buildability
-                             const fakePlayer = { ...player, resources: simulatedRes };
-                             if (this.canBuild(fakePlayer, targetCard)) return true;
-                         }
-                     }
-                     if (!changed) break; 
-                 }
-                 return false;
+            canBuild(player, card) {
+                return GameCore.canBuild(player.resources, card);
             }
 
-            canConvert(player, card) {
-                const effect = card.effect;
-                const r = player.resources;
-                if (effect === 'convert_same3_to_W') {
-                    return (r.F >= 3) || (r.M >= 3) || (r.K >= 3) || 
-                           (r.F + r.W >= 3 && r.F >= 1) || 
-                           (r.M + r.W >= 3 && r.M >= 1) || 
-                           (r.K + r.W >= 3 && r.K >= 1);
-                }
-                if (effect === 'convert_K2_to_W') return r.K + r.W >= 2;
-                if (effect === 'convert_KMF_to_W') {
-                    const def = Math.max(0, 1 - r.F) + Math.max(0, 1 - r.M) + Math.max(0, 1 - r.K);
-                    return r.W >= def && (r.F >= 1 || r.M >= 1 || r.K >= 1);
-                }
-                return false;
-            }
-
-            applyConversion(player, card) {
-                const effect = card.effect;
-                const r = player.resources;
-                if (effect === 'convert_same3_to_W') {
-                    for (let res of ['F', 'M', 'K']) {
-                        if (r[res] >= 3) { r[res] -= 3; r.W++; return; }
-                    }
-                    for (let res of ['F', 'M', 'K']) {
-                        if (r[res] + r.W >= 3 && r[res] >= 1) {
-                            const from = Math.min(3, r[res]);
-                            r[res] -= from;
-                            r.W -= (3 - from);
-                            r.W++;
-                            return;
-                        }
-                    }
-                } else if (effect === 'convert_K2_to_W') {
-                    const fromK = Math.min(2, r.K);
-                    r.K -= fromK;
-                    r.W -= (2 - fromK);
-                    r.W++;
-                } else if (effect === 'convert_KMF_to_W') {
-                    ['F', 'M', 'K'].forEach(res => {
-                        if (r[res] >= 1) r[res]--;
-                        else r.W--;
-                    });
-                    r.W++;
-                }
-            }
-
-            executeBuild(player, card) {
-                this.payBuildCost(player, card);
-                this.removeFromHand(player, card);
-                const builtApp = { ...card, builtAt: this.round };
-                player.construction.push(builtApp);
-                
-                // Handle chain builds
-                let chain = card.chain_build || 0;
-                while (chain > 0 && player.hand.length > 0) {
-                    const buildable = player.hand.filter(c => this.canBuild(player, c));
-                    if (buildable.length === 0) break;
-                    const next = buildable[Math.floor(Math.random() * buildable.length)];
-                    this.payBuildCost(player, next);
-                    this.removeFromHand(player, next);
-                    player.construction.push({ ...next, builtAt: this.round });
-                    chain = chain - 1 + (next.chain_build || 0);
-                }
+            checkCost(player, cost) {
+                return GameCore.checkCost(player.resources, cost);
             }
 
             payBuildCost(player, card) {
-                if (!card.cost) return;
-                if (card.cost.multi === 'same3') {
-                    for (let res of ['F', 'M', 'K']) {
-                        if (player.resources[res] >= 3) { player.resources[res] -= 3; return; }
+                return GameCore.payCost(player.resources, card.cost);
+            }
+
+            canConvert(player, card) {
+                if (card.usedThisTurn) return false;
+                const effect = card.effect;
+                const r = player.resources;
+                if (effect === 'convert_same3_to_W') return (r.F>=3 || r.M>=3 || r.K>=3);
+                if (effect === 'convert_K2_to_W') return (r.K >= 2); // Keep simple
+                if (effect === 'convert_W2_to_W3') return (r.W >= 2);
+                if (effect === 'convert_W2_to_FMK') return (r.W >= 2);
+                if (effect === 'action_gain_1_choice') return true;
+                return false;
+            }
+
+            applyConversionEffect(player, card) {
+                card.usedThisTurn = true;
+                const effect = card.effect;
+                const r = player.resources;
+                
+                if (effect === 'convert_same3_to_W') {
+                    for (let x of ['F', 'M', 'K']) if (r[x]>=3) { 
+                        r[x]-=3;
+                        this.gainResource(player, 'W', 1, 'convert');
+                        break; 
                     }
-                    for (let res of ['F', 'M', 'K']) {
-                        if (player.resources[res] + player.resources.W >= 3) {
-                            const from = Math.min(3, player.resources[res]);
-                            player.resources[res] -= from;
-                            player.resources.W -= (3 - from);
-                            return;
-                        }
+                } else if (effect === 'convert_K2_to_W') {
+                    // Cost payment logic: K2 or K+(W if sufficient)
+                    let paid = 0;
+                    let currentK = r.K || 0;
+                    let fromK = Math.min(2, currentK);
+                    r.K = currentK - fromK;
+                    paid += fromK;
+                    if (paid < 2) {
+                        r.W = (r.W || 0) - (2 - paid);
                     }
-                } else { // Added this else block for general cost handling
-                    for (let r in card.cost) {
-                        if (r === 'multi') continue;
-                        const needed = card.cost[r];
-                        const has = player.resources[r] || 0;
-                        if (has >= needed) {
-                            player.resources[r] -= needed;
-                        } else {
-                            player.resources[r] = 0;
-                            player.resources.W -= (needed - has);
-                        }
+                    this.gainResource(player, 'W', 1, 'convert');
+                } else if (effect === 'convert_W2_to_W3') {
+                    // W2消費してW3獲得(差分+1)
+                    if (r.W >= 2) {
+                        r.W -= 2;
+                        this.gainResource(player, 'W', 3, 'convert');
                     }
+                } else if (effect === 'convert_W2_to_FMK') {
+                    r.W -= 2; r.F++; r.M++; r.K++;
+                } else if (effect === 'action_gain_1_choice') {
+                    const rnd = ['F', 'M', 'K'][Math.floor(Math.random()*3)];
+                    this.gainResource(player, rnd);
                 }
             }
 
-            executeMove(player, card) {
-                this.discardPile.push(card);
-                this.removeFromHand(player, card);
-                
-                
-                const steps = card.move || 0;
-                // 0歩移動（その場に留まる）も、リソース獲得などの処理を行うため続行する
-                // if (steps === 0) return; 
+            finishMove(player, targetId, card, passengers = []) {
+                targetId = Number(targetId);
+                player.location = targetId;
+                const node = mapNodes.find(n => n.id === targetId);
 
+                // Note: Round tokens are consumed when player gains W from loop (10→1 passage)
+                // This is handled in gainResource when source is 'loop'
 
-                const reachable = this.getReachableNodes(player.location, steps);
-                // Smart Move Logic
-                let bestTarget = player.location;
-                if (reachable.length > 0) {
-                    const scoredTargets = reachable.map(targetId => {
-                        let score = 0;
-                        const nodeData = mapNodes.find(n => n.id === targetId);
-                        const path = this.findPath(player.location, targetId, steps);
-
-                        // A: Loop
-                        let loopBonus = 50;
-                        if (player.aiStrategy === 'Rusher') loopBonus = 150;
-                        if (this.checkLoop(path)) {
-                            score += loopBonus;
-                            // Check double loop for move 10? Headless simplified.
-                        }
-
-                        // B: Needed Resources
-                        let needBonus = 20;
-                        if (player.aiStrategy === 'Hoarder') needBonus = 80;
-                        else if (player.aiStrategy === 'Rusher') needBonus = 10;
-                        
-                        if (nodeData && ['F','M','K'].includes(nodeData.resource)) {
-                             // Simple check: does player need this?
-                             // Headless simplified check
-                             const needed = player.hand.some(c => {
-                                 if(!c.cost) return false;
-                                 if(c.cost[nodeData.resource]) return player.resources[nodeData.resource] < c.cost[nodeData.resource];
-                                 return false;
-                             });
-                             if (needed) score += needBonus;
-                        }
-
-                        // C: Forward Progress
-                        const currIdx = parseInt(player.location);
-                        const tIdx = parseInt(targetId);
-                        const progress = (tIdx - currIdx + 10) % 10 || 10;
-                        score += progress;
-
-                        return { id: targetId, score };
-                    });
-
-                    scoredTargets.sort((a, b) => b.score - a.score);
-                    bestTarget = scoredTargets[0].id;
-                }
-                
-                const target = bestTarget;
-                
-                // Check for loop
-                const path = this.findPath(player.location, target, steps);
-                if (this.checkLoop(path)) {
-                    if (this.roundTokens > 0) {
-                        player.roundTokens = (player.roundTokens || 0) + 1;
-                        this.roundTokens--;
-                    }
-                }
-                
-                // Reset turn flags
-                player.construction.forEach(c => c.usedThisTurn = false);
-
-                if (this.roundTokens <= 0) {
-                     this.gameEndTriggered = true;
-                }
-                // player.roundTokens--; // Removed incorrect decrement
-                
-                const oldLoc = player.location;
-                
-                // Carry Logic (Phase 1: Identify Passengers)
-                let passengers = [];
-                if (this.nodeStacks[oldLoc]) {
-                    const idx = this.nodeStacks[oldLoc].indexOf(player.id);
-                    if (idx !== -1) {
-                         // Players ABOVE this player are passengers
-                         const pIds = this.nodeStacks[oldLoc].slice(idx + 1);
-                         passengers = this.players.filter(p => pIds.includes(p.id));
-                    }
-                }
-                
-                player.location = target;
-                passengers.forEach(p => p.location = target); // Move passengers
-                
-                // Update Stacks
-                const movingIds = [player.id, ...passengers.map(p => p.id)];
-                // Remove from old
-                if (this.nodeStacks[oldLoc]) {
-                    this.nodeStacks[oldLoc] = this.nodeStacks[oldLoc].filter(id => !movingIds.includes(id));
-                }
-                // Add to new
-                if (!this.nodeStacks[target]) this.nodeStacks[target] = [];
-                this.nodeStacks[target].push(...movingIds);
-
-                
-                // Gain resources
-                if (card.move_resource && card.move_resource.length > 0) {
+                // 1. Move Resource
+                if (card && card.move_resource && card.move_resource.length > 0) {
                     const res = card.move_resource[Math.floor(Math.random() * card.move_resource.length)];
-                    player.resources[res] = (player.resources[res] || 0) + 1;
+                    this.gainResource(player, res);
                 }
-                
-                const node = mapNodes.find(n => n.id === target);
-                if (node) {
+
+                // 2. Node Resource
+                if (node && node.resource) {
                     if (node.resource === 'FMK') {
-                        const choice = ['F', 'M', 'K'][Math.floor(Math.random() * 3)];
-                        player.resources[choice]++;
+                        const rnd = ['F', 'M', 'K'][Math.floor(Math.random()*3)];
+                        this.gainResource(player, rnd);
                     } else if (node.resource === 'Card') {
                         this.drawCards(player, 1);
-                    } else if (node.resource) {
-                        player.resources[node.resource] = (player.resources[node.resource] || 0) + 1;
+                        this.nodeStats[targetId].cardsGained++;
+                    } else if (node.resource === 'W') {
+                        this.gainResource(player, 'W', 1, 'node');
+                    } else {
+                        this.gainResource(player, node.resource);
                     }
+                }
+                
+                this.nodeStats[targetId].visits++;
 
-                    // Share Ride Bonus for Passengers (Node Reward ONLY)
-                    passengers.forEach(p => {
-                        if (node.resource === 'FMK') {
-                             const choice = ['F', 'M', 'K'][Math.floor(Math.random() * 3)];
-                             p.resources[choice] = (p.resources[choice] || 0) + 1;
-                        } else if (node.resource === 'Card') {
-                             this.drawCards(p, 1);
-                        } else if (['F', 'M', 'K'].includes(node.resource)) {
-                             p.resources[node.resource] = (p.resources[node.resource] || 0) + 1;
+                // 3. Production Trigger
+                if (node && (node.resource === 'FMK' || ['F','M','K'].includes(node.resource))) {
+                     player.construction.forEach(c => {
+                          let trigger = c.production_condition;
+                          if (node.resource === 'FMK') return; // FMK implies CHOICE, normally triggers specific?
+                          // Game Rule: Makati(1) triggers ALL. Standard node triggers matching.
+                          // But simulator simplification:
+                          
+                          let match = false;
+                          if (node.id === 1) match = true; // Makati triggers all?
+                          if (node.resource === trigger) match = true;
+                          
+                           if (match && c.production) {
+                               for (let r in c.production) {
+                                   let val = c.production[r];
+                                   
+                                   if (val === 'variable') {
+                                       val = 0;
+                                       if (c.production_formula) {
+                                           if (c.production_formula.includes('culture')) val = player.construction.filter(x => x.type === 'culture').length;
+                                           else if (c.production_formula.includes('industry')) val = player.construction.filter(x => x.type === 'industry').length;
+                                           else if (c.production_formula.includes('politics')) val = player.construction.filter(x => x.type === 'politics').length;
+                                       }
+                                   }
+
+                                   if (typeof val === 'number') this.gainResource(player, r, val, 'production');
+                               }
+                          }
+                     });
+                }
+                
+                // Warp Logic
+                const currentNode = mapNodes.find(n => n.id === player.location);
+                if (currentNode && currentNode.warpTo) {
+                     // console.log(`[WARP] Player ${player.name} warped from ${currentNode.name}(${currentNode.id}) to ${currentNode.warpTo}`);
+                     if (passengers.length > 0) {
+                         passengers.forEach(p => p.location = currentNode.warpTo);
+                     }
+                     this.updateNodeStacks(player, currentNode.warpTo, passengers);
+                     player.location = currentNode.warpTo;
+                }
+
+                // 4. Taupo (5) Extra Move (replaces Spukebec logic)
+                if (targetId === 5) {
+                    const movables = player.hand.filter(c => c);
+                    if (movables.length > 0 && Math.random() < 0.5) {
+                        const discard = movables[Math.floor(Math.random() * movables.length)];
+                        this.removeFromHand(player, discard);
+                        this.discardPile.push(discard);
+                        
+                        const exMove = discard.move;
+                        const reachable = this.getReachableNodes(player.location, exMove);
+                        if (reachable.length > 0) {
+                             const nextT = reachable[Math.floor(Math.random() * reachable.length)];
+                             const path = this.findPath(player.location, nextT, exMove);
+                             if (this.checkPathForLoop(path)) {
+                                 this.loopCount++;
+                                 this.gainResource(player, 'W', 1, 'loop');
+                             }
+                             // Simple recursive finish move?
+                             // Just update stack and recursively call finishMove
+                             // But avoid infinite loop? Hand decreases, so it terminates.
+                             this.updateNodeStacks(player, nextT, []); // Assume no passengers carried on extra move
+                             this.finishMove(player, nextT, null);
                         }
-                    });
+                    }
+                }
+                
+                // 5. 変換効果の処理（「旅」カード: 同種3個をWへ変換）
+                this.processConversionEffects(player);
+            }
+            
+            processConversionEffects(player) {
+                // 変換効果を持つカードの処理
+                const conversionCards = player.construction.filter(c => c.effect && c.effect.startsWith('convert_'));
+                if (conversionCards.length === 0) return;
+                
+                // AIは常に試行（貪欲）
+                for (const card of conversionCards) {
+                    if (GameCore.canConvert(player.resources, card.effect)) {
+                         this.applyConversionEffect(player, card);
+                    }
+                }
+            }
+            
+            performTurnEnd(player) {
+                // Check Warp
+                if (player.location === 12 || player.location === 14) {
+                    const target = (player.location === 12) ? 14 : 12;
+                    this.updateNodeStacks(player, target, []); // Warp carries passengers? Game rules say yes.
+                    // But for Sim simplicity, let's assume warp handles it.
+                    // Wait, game.js implementation of Warp is:
+                    // if (player.location === 12 || 14) ... moveTo(other)
+                    // Does it carry? updateNodeStacks logic in game.js works on 'executeMove'.
+                    // Warp happens at end of turn.
                     
-                    // Triggered production
-                    if (['F', 'M', 'K'].includes(node.resource)) {
-                        player.construction.forEach(c => {
-                            if (c.production_condition === node.resource && c.production) {
-                                for (let r in c.production) {
-                                    const val = c.production[r];
-                                    if (typeof val === 'number') {
-                                        player.resources[r] = (player.resources[r] || 0) + val;
-                                    } else if (val === 'variable' && c.production_formula) {
-                                        // Handle variable production
-                                        let count = 0;
-                                        if (c.production_formula.includes('culture_cards')) {
-                                            count = player.construction.filter(x => x.type === 'culture').length;
-                                        } else if (c.production_formula.includes('industry_cards')) {
-                                            count = player.construction.filter(x => x.type === 'industry').length;
-                                        } else if (c.production_formula.includes('politics_cards')) {
-                                            count = player.construction.filter(x => x.type === 'politics').length;
-                                        }
-                                        player.resources[r] = (player.resources[r] || 0) + count;
-                                    }
-                                }
-                            }
-                        });
+                    const pIds = this.nodeStacks[player.location].filter(id => id !== player.id); 
+                    // Wait, stack logic is tricky. 
+                    // Let's just move the player in Sim.
+                    const passengers = this.getPassengers(player); // Only above us?
+                    // Actually, warp moves EVERYONE or just active player?
+                    // If I am at bottom of stack, do I carry everyone through warp?
+                    // Game rule: "Move to other node". Usually standard movement rules apply.
+                    
+                    const movingIds = [player.id, ...passengers.map(p => p.id)];
+                    if (this.nodeStacks[player.location]) {
+                        this.nodeStacks[player.location] = this.nodeStacks[player.location].filter(id => !movingIds.includes(id));
+                    }
+                    if (!this.nodeStacks[target]) this.nodeStacks[target] = [];
+                    this.nodeStacks[target].push(...movingIds);
+                    
+                    player.location = target;
+                    passengers.forEach(p => p.location = target);
+                }
+            }
+
+            forceReset(player) {
+                // Determine if we track this as "reset" usage?
+                player.hand.forEach(c => this.discardPile.push(c));
+                player.hand = [];
+                player.selectedCard = null;
+                this.drawCards(player, 3);
+            }
+
+            // Utils
+            
+            getPassengers(player) {
+                const stack = this.nodeStacks[player.location];
+                if (!stack) return [];
+                const idx = stack.indexOf(player.id);
+                if (idx === -1) return [];
+                const pIds = stack.slice(idx + 1);
+                return this.players.filter(p => pIds.includes(p.id));
+            }
+
+            updateNodeStacks(player, targetId, passengers) {
+                const sourceId = player.location;
+                const movingIds = [player.id, ...passengers.map(p => p.id)];
+                
+                if (this.nodeStacks[sourceId]) {
+                    this.nodeStacks[sourceId] = this.nodeStacks[sourceId].filter(id => !movingIds.includes(id));
+                }
+                if (!this.nodeStacks[targetId]) this.nodeStacks[targetId] = [];
+                this.nodeStacks[targetId].push(...movingIds);
+
+                player.location = targetId;
+                passengers.forEach(p => p.location = targetId);
+            }
+
+            gainResource(player, type, amount = 1, source = 'other') {
+                if (!type || amount <= 0) return 0;
+                
+                // 特殊タイプ 'Card' の処理
+                if (type === 'Card') {
+                    this.drawCards(player, 1);
+                    return 0;
+                }
+                // 特殊タイプ 'FMK' の処理
+                if (type === 'FMK') {
+                    const pick = ['F', 'M', 'K'][Math.floor(Math.random() * 3)];
+                    return this.gainResource(player, pick, 1, source);
+                }
+                
+                let actualGain = 0;
+
+                if (type === 'W') {
+                    // Wはサプライから取得 (有限)
+                    if (this.roundTokens >= amount) {
+                        actualGain = amount;
+                        this.roundTokens -= amount;
+                    } else {
+                        actualGain = this.roundTokens;
+                        this.roundTokens = 0;
+                    }
+                    if (actualGain > 0) {
+                        player.resources.W = (player.resources.W || 0) + actualGain;
+                        console.log(`[W GAIN] Round ${this.round}: ${player.name} gained ${actualGain}W from '${source}'. Supply left: ${this.roundTokens}`);
+                    }
+                    // ゲーム終了チェック
+                    if (this.roundTokens <= 0) {
+                        this.gameEndTriggered = true;
+                    }
+                } else {
+                    // F/M/Kは通常加算 (無限)
+                    if (player.resources[type] !== undefined) {
+                        player.resources[type] += amount;
+                        actualGain = amount;
+                    }
+                }
+
+                // Node Stats Tracking
+                if (actualGain > 0 && this.nodeStats[player.location]) {
+                    if (source === 'node' || source === 'production' || source === 'other') {
+                         this.nodeStats[player.location].resGained += actualGain;
+                    }
+                }
+                
+                return actualGain;
+            }
+
+            checkResourceCap(player) {
+                const CAP = 8;
+                const total = (player.resources.F||0) + (player.resources.M||0) + (player.resources.K||0); // Wは上限に含まない
+                if (total > CAP) {
+                    let excess = total - CAP;
+                    const types = ['F', 'M', 'K'];
+                    while (excess > 0) {
+                        let maxType = types[0];
+                        let maxVal = player.resources[maxType] || 0;
+                        for (let t of types) {
+                            if ((player.resources[t] || 0) > maxVal) { maxVal = player.resources[t]; maxType = t; }
+                        }
+                        if (maxVal > 0) { player.resources[maxType]--; excess--; }
+                        else break;
                     }
                 }
             }
@@ -727,94 +1278,51 @@
                 if (idx !== -1) player.hand.splice(idx, 1);
             }
 
-            getReachableNodes(startId, steps) {
-                if (steps === 0) return [startId];
-                let queue = [{ id: startId, path: [startId], dist: 0 }];
-                let valid = new Set();
-                while (queue.length > 0) {
-                    const cur = queue.shift();
-                    if (cur.dist === steps) { valid.add(cur.id); continue; }
-                    const node = mapNodes.find(n => n.id === cur.id);
-                    if (node && node.connections) {
-                        node.connections.forEach(next => {
-                            if (!cur.path.includes(next)) {
-                                queue.push({ id: next, path: [...cur.path, next], dist: cur.dist + 1 });
-                            }
-                        });
-                    }
-                }
-                return valid.size > 0 ? Array.from(valid) : [startId];
-            }
-
             findPath(from, to, steps) {
-                if (from === to) return [from];
-                let queue = [{ id: from, path: [from] }];
-                while (queue.length > 0) {
-                    const cur = queue.shift();
-                    if (cur.path.length > steps + 1) continue;
-                    if (cur.id === to && cur.path.length === steps + 1) return cur.path;
-                    const node = mapNodes.find(n => n.id === cur.id);
-                    if (node && node.connections) {
-                        node.connections.forEach(next => {
-                            if (!cur.path.includes(next)) {
-                                queue.push({ id: next, path: [...cur.path, next] });
-                            }
-                        });
-                    }
-                }
-                return [from];
+                return GameCore.findPath(mapNodes, from, to, steps);
             }
 
-            checkLoop(path) {
-                for (let i = 0; i < path.length - 1; i++) {
-                    if (path[i] === 10 && path[i + 1] === 1) return true;
-                }
-                return false;
+            getReachableNodes(startId, steps) {
+                return GameCore.getReachableNodes(mapNodes, startId, steps);
             }
 
-            updateStacks(player, from, to) {
-                if (this.nodeStacks[from]) {
-                    this.nodeStacks[from] = this.nodeStacks[from].filter(id => id !== player.id);
-                }
-                if (!this.nodeStacks[to]) this.nodeStacks[to] = [];
-                this.nodeStacks[to].push(player.id);
+            checkPathForLoop(path) {
+                return GameCore.checkPathForLoop(path);
             }
 
-            calculateVP(player) {
-                let vp = 0;
-                player.construction.forEach(c => {
-                    if (c.vp_logic === 'variable') {
-                        const counts = {
-                            culture: player.construction.filter(x => x.type === 'culture').length,
-                            industry: player.construction.filter(x => x.type === 'industry').length,
-                            politics: player.construction.filter(x => x.type === 'politics').length
-                        };
-                        if (c.vp_formula) {
-                            if (c.vp_formula.includes('min(culture, industry, politics)')) {
-                                vp += 2 * Math.min(counts.culture, counts.industry, counts.politics);
-                            } else if (c.vp_formula.includes('round_tokens')) {
-                                vp += 2 * (player.roundTokens || 0);
-                            } else if (c.vp_formula.includes('culture_cards') || c.vp_formula.includes('culture')) {
-                                vp += counts.culture;
-                            } else if (c.vp_formula.includes('industry_cards') || c.vp_formula.includes('industry')) {
-                                vp += counts.industry;
-                            } else if (c.vp_formula.includes('politics_cards') || c.vp_formula.includes('politics')) {
-                                vp += counts.politics;
-                            }
-                        }
-                    } else {
-                        vp += c.vp || 0;
-                    }
-                });
-                // Round token bonus
-                const rt = player.roundTokens || 0;
-                if (rt === 1) vp += 1;
-                else if (rt === 2) vp += 3;
-                else if (rt === 3) vp += 6;
-                else if (rt === 4) vp += 10;
-                else if (rt >= 5) vp += 10 + (rt - 4) * 3;
+            getDistToStart(fromId) {
+                if (fromId === 1) return 0;
+                // BFS
+                const queue = [{ id: fromId, dist: 0 }];
+                const visited = new Set([fromId]);
                 
-                return vp;
+                // Add explicit connection handling because simpler than GameCore dependency
+                const getAdjacents = (nid) => {
+                    const node = mapNodes.find(n => n.id === nid);
+                    if (!node) return [];
+                    let targets = [...node.connections];
+                    if (node.warpTo && node.id === nid) {
+                        // Warp is not an instant edge for BFS here?
+                        // If we want "Steps to Goal", treating Warp as edge (1 step) is reasonable heuristic for "Shortcut"
+                        // targets.push(node.warpTo);
+                    }
+                    return targets;
+                };
+
+                while (queue.length > 0) {
+                    const { id, dist } = queue.shift();
+                    if (id === 1) return dist;
+                    if (dist > 20) continue; // Prune
+
+                    const neighbors = getAdjacents(id);
+                    for (let next of neighbors) {
+                        if (!visited.has(next)) {
+                            visited.add(next);
+                            queue.push({ id: next, dist: dist + 1 });
+                        }
+                    }
+                }
+                return 999;
             }
 
             updatePeakResources() {
@@ -834,32 +1342,47 @@
                 if (totalAll > this.peakResources.total) this.peakResources.total = totalAll;
             }
 
-            endGame() {
-                this.isRunning = false;
-                if (this.onComplete) {
-                    this.onComplete(this.getResult());
+            run(callback) {
+                while (this.round <= this.maxRounds) {
+                    this.runRound();
+                    if (this.endingRound) break;
                 }
+                callback(this.getResult());
             }
 
             getResult() {
-                const results = this.players.map(p => ({
-                    id: p.id,
-                    name: p.name,
-                    vp: this.calculateVP(p),
-                    roundTokens: p.roundTokens,
-                    builtCards: p.construction.map(c => ({ name: c.name_jp, round: c.builtAt || 0 })),
-                    builtCount: p.construction.length,
-                    finalResources: { ...p.resources },
-                    aiStrategy: p.aiStrategy
-                }));
-                
+                const results = this.players.map(p => {
+                     // Calculate VP
+                     const vpResult = GameCore.calculateVP(p, this.players);
+                     const rt = p.resources.W || 0;
+                     const cardVp = vpResult.breakdown.card;
+                     const loopVp = vpResult.breakdown.loop;
+                     // const totalVp = vpResult.total; // already used in return map
+
+                     return {
+                        id: p.id,
+                        name: p.name,
+                        vp: vpResult.total,
+                        cardVp: cardVp,
+                        loopVp: loopVp,
+                        roundTokens: rt,
+                        builtCards: p.construction.map(c => c.name_jp),
+                        builtCount: p.construction.length,
+                        finalResources: { ...p.resources },
+                        aiStrategy: p.aiStrategy
+                    };
+                });
                 results.sort((a, b) => b.vp - a.vp);
-                
                 return {
                     gameId: this.gameId,
                     playerCount: this.playerCount,
                     peakResources: { ...this.peakResources },
-                    totalRounds: this.round - 1,
+                    totalRounds: this.endingRound || (this.round - 1),
+                    loopCount: this.loopCount,
+                    finalRoundTokens: this.roundTokens,
+                    nodeStats: this.nodeStats,
+                    resourceHistory: this.resourceHistory,
+                    cardUsageStats: this.cardUsageStats,
                     winner: results[0].name,
                     winnerVP: results[0].vp,
                     players: results
@@ -867,62 +1390,592 @@
             }
         }
 
+
+
+        let charts = {};
+
         function displaySummary() {
             const summary = document.getElementById('summary');
-            const statsDiv = document.getElementById('summaryStats');
+            document.getElementById('summaryStats'); // ensure existence
             summary.style.display = 'block';
-            
-            const wins = {};
-            let totalRounds = 0;
-            let totalVP = 0;
-            const cardCounts = {};
-            
-            allResults.forEach(r => {
-                if (r.error) return;
-                wins[r.winner] = (wins[r.winner] || 0) + 1;
-                totalRounds += r.totalRounds;
-                r.players.forEach(p => {
-                    totalVP += p.vp;
-                    p.builtCards.forEach(c => {
-                        cardCounts[c] = (cardCounts[c] || 0) + 1;
-                    });
-                });
-            });
-            
-            const avgRounds = (totalRounds / allResults.length).toFixed(1);
-            const avgVP = (totalVP / (allResults.length * parseInt(document.getElementById('playerCount').value))).toFixed(1);
-            
-            let html = `
-                <div class="stat-box"><div class="stat-label">平均ラウンド数</div><div class="stat-value">${avgRounds}</div></div>
-                <div class="stat-box"><div class="stat-label">平均VP</div><div class="stat-value">${avgVP}</div></div>
-            `;
-            
-            // Top built cards
-            const topCards = Object.entries(cardCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
-            html += `<h4>よく建設されるカード TOP5</h4><ol>`;
-            topCards.forEach(([name, count]) => {
-                html += `<li>${name}: ${count}回</li>`;
-            });
-            html += `</ol>`;
-            
-            statsDiv.innerHTML = html;
-        }
 
-        function downloadResults() {
-            const data = {
-                timestamp: new Date().toISOString(),
-                simulationCount: allResults.length,
-                playerCount: parseInt(document.getElementById('playerCount').value),
-                games: allResults
+            if (allResults.length === 0) return;
+
+            // 1. Filter Errors
+            const validResults = allResults.filter(r => !r.error);
+            
+            // 2. Outlier Filtering
+            const turns = validResults.map(r => r.totalRounds).sort((a,b) => a - b);
+            const q1 = turns[Math.floor(turns.length * 0.25)];
+            const q3 = turns[Math.floor(turns.length * 0.75)];
+            const iqr = q3 - q1;
+            const lowerFence = q1 - 1.5 * iqr;
+            const upperFence = q3 + 1.5 * iqr;
+
+            // Filter
+            // Excluding maxRounds (30) hits as they are likely stuck simulations
+            const results = validResults.filter(r => r.totalRounds >= lowerFence && r.totalRounds <= upperFence && r.totalRounds < 30);
+            const excludedCount = validResults.length - results.length;
+            const total = results.length;
+
+            if (total === 0) {
+                // document.getElementById('resultsText').innerHTML = "<p>No valid games found after filtering.</p>";
+                // Allow showing raw if filtered is 0 (e.g. if rounds are all same)
+                // return;
+            }
+
+            // Stats Aggregation
+            const wins = { 'Builder': 0, 'Looper': 0, 'Balanced': 0 };
+            const seatWins = [0, 0, 0, 0]; 
+            const stratStats = {
+                'Builder': { games: 0, vp: 0, vp_card: 0, vp_loop: 0, w_tokens: 0, built_cards: 0, rounds: 0, max_vp: -1, min_vp: 999 },
+                'Looper': { games: 0, vp: 0, vp_card: 0, vp_loop: 0, w_tokens: 0, built_cards: 0, rounds: 0, max_vp: -1, min_vp: 999 },
+                'Balanced': { games: 0, vp: 0, vp_card: 0, vp_loop: 0, w_tokens: 0, built_cards: 0, rounds: 0, max_vp: -1, min_vp: 999 }
             };
             
-            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `ail_lime_simulation_${allResults.length}games_${Date.now()}.json`;
-            a.click();
-            URL.revokeObjectURL(url);
+            const nodeVisits = {};
+            let totalTurnsSum = 0;
+            
+            // Min/Max & Resource Limits Tracking
+            let overallMinRounds = 999;
+            let overallMaxRounds = -1;
+            let overallMinVP = 999;
+            let overallMaxVP = -1;
+            
+            // Max concurrent tokens needed (across all games, all turns, observed spike)
+            let maxF = 0, maxM = 0, maxK = 0, maxW = 0;
+
+            const roundCounts = {}; // { 10: 5, 11: 12, ... }
+            let totalLoops = 0;
+            let totalRemainingTokens = 0;
+
+            results.forEach(r => {
+                totalTurnsSum += r.totalRounds;
+                if (r.totalRounds < overallMinRounds) overallMinRounds = r.totalRounds;
+                if (r.totalRounds > overallMaxRounds) overallMaxRounds = r.totalRounds;
+                
+                roundCounts[r.totalRounds] = (roundCounts[r.totalRounds] || 0) + 1;
+                
+                // Track loop counts
+                totalLoops += r.loopCount || 0;
+                totalRemainingTokens += r.finalRoundTokens || 0;
+
+                // Resource Limit Check
+                if (r.resourceHistory) {
+                    r.resourceHistory.forEach(s => {
+                        // Snapshot s contains sum of all players' resources at that turn
+                        if ((s.F||0) > maxF) maxF = s.F;
+                        if ((s.M||0) > maxM) maxM = s.M;
+                        if ((s.K||0) > maxK) maxK = s.K;
+                        if ((s.W||0) > maxW) maxW = s.W;
+                    });
+                }
+
+                const winner = r.players[0];
+                if (wins[winner.aiStrategy] !== undefined) wins[winner.aiStrategy]++;
+                
+                // Track Winner VP for Overall Min/Max
+                if (winner.vp < overallMinVP) overallMinVP = winner.vp;
+                if (winner.vp > overallMaxVP) overallMaxVP = winner.vp;
+                
+                // Aggregate player stats
+                r.players.forEach(p => {
+                     const s = p.aiStrategy;
+                     if (stratStats[s]) {
+                        stratStats[s].games++;
+                        stratStats[s].vp += p.vp;
+                        stratStats[s].vp_card += p.cardVp || 0;
+                        stratStats[s].vp_loop += p.loopVp || 0;
+                        stratStats[s].w_tokens += p.roundTokens || 0;
+                        stratStats[s].built_cards += p.builtCount || 0;
+                        stratStats[s].built_cards += p.builtCount || 0;
+                        stratStats[s].rounds += r.totalRounds; 
+                        
+                        // Count actual loops (derived from vp_loop for simplicity, or we should track it directly)
+                        // Note: p.loopVp is total VP from pairs. 1 Pair = 5VP.
+                        // Ideally we want raw loop count. But p structure doesn't have raw loop count directly exposed here easily unless we tracked it.
+                        // Let's assume vp_loop is correct for scoring, but raw loops might be different.
+                        // Actually r.players comes from getResult() which returns { stats }.
+                        // Let's check getResult.
+                        // getResult returns: players: this.players.map ...
+                        
+                        if (p.vp > stratStats[s].max_vp) stratStats[s].max_vp = p.vp;
+                        if (p.vp < stratStats[s].min_vp) stratStats[s].min_vp = p.vp;
+                     }
+                     const match = p.name ? p.name.match(/AI-(\d)/) : null;
+                     if (match && p.vp === r.winnerVP) {
+                         const seatIdx = parseInt(match[1]) - 1;
+                         if (seatIdx >= 0 && seatIdx < 4) seatWins[seatIdx]++; 
+                     }
+                });
+
+                if (r.nodeStats) {
+                    for (let nid in r.nodeStats) {
+                        nodeVisits[nid] = (nodeVisits[nid] || 0) + r.nodeStats[nid].visits;
+                    }
+                }
+            });
+            
+            // Text Summary
+            const avgTurns = (totalTurnsSum / total).toFixed(1);
+            let summaryHTML = `
+                <div class="stat-box"><div class="stat-label">平均ラウンド</div><div class="stat-value">${avgTurns} <span style="font-size:12px;color:#999;">(Min:${overallMinRounds} - Max:${overallMaxRounds})</span></div></div>
+                <div class="stat-box"><div class="stat-label">勝者VP範囲</div><div class="stat-value" style="font-size:20px;">${overallMinVP} ～ ${overallMaxVP}</div></div>
+                <div class="stat-box" style="width:100%;"><div class="stat-label">最大同時資源(目安)</div><div class="stat-value" style="font-size:14px; text-align:left;">
+                    Food: <strong>${maxF}</strong><br>
+                    Material: <strong>${maxM}</strong><br>
+                    Knowledge: <strong>${maxK}</strong><br>
+                    Money: <strong>${maxW}</strong>
+                </div></div>
+                <div class="stat-box" style="width:100%; margin-top:10px;"><div class="stat-label">分析対象</div><div class="stat-value" style="font-size:16px;">全${allResults.length}回のうち、${excludedCount}回の外れ値を除外した${total}回を集計</div></div>
+                
+                <div class="stat-box" style="background:#ffe0e0;"><div class="stat-label">🔄 平均ループ回数</div><div class="stat-value">${(totalLoops/total).toFixed(1)} 回/ゲーム</div></div>
+                <div class="stat-box" style="background:#e0ffe0;"><div class="stat-label">💰 平均残トークン</div><div class="stat-value">${(totalRemainingTokens/total).toFixed(1)} 個</div></div>
+                
+                <p><strong>Win Rates:</strong><br>
+                Builder: ${((wins['Builder']||0)/total*100).toFixed(1)}%<br>
+                Looper: ${((wins['Looper']||0)/total*100).toFixed(1)}%<br>
+                Balanced: ${((wins['Balanced']||0)/total*100).toFixed(1)}%</p>
+            `;
+            
+            // Strategy Table
+            const strategies = ['Builder', 'Looper', 'Balanced'];
+            let tableHtml = `<h4>戦略別詳細データ (平均値)</h4>
+            <table style="width:100%; border-collapse: collapse; margin-bottom:20px; background:white;" class="data-table">
+                <tr style="background:#f8f9fa; border-bottom:2px solid #ddd;">
+                    <th style="padding:8px;">Strategy</th>
+                    <th style="padding:8px;">Win Rate</th>
+                    <th style="padding:8px;">Avg VP</th>
+                    <th style="padding:8px;">Max VP</th>
+                    <th style="padding:8px;">Min VP</th>
+                    <th style="padding:8px;">Avg Rounds</th>
+                    <th style="padding:8px;">Avg W</th>
+                    <th style="padding:8px;">Avg Loops</th>
+                </tr>`;
+            
+            strategies.forEach(s => {
+                const st = stratStats[s];
+                if (st.games === 0) return;
+                const winRate = ((wins[s]||0) / total * 100).toFixed(1) + '%';
+                const avgVp = (st.vp / st.games).toFixed(1);
+                const avgRounds = (st.rounds / st.games).toFixed(1);
+                tableHtml += `
+                <tr style="border-bottom:1px solid #eee;">
+                    <td style="padding:8px;"><strong>${s}</strong></td>
+                    <td style="padding:8px; text-align:center;">${winRate}</td>
+                    <td style="padding:8px; text-align:center;">${avgVp}</td>
+                    <td style="padding:8px; text-align:center; color:#27ae60;">${st.max_vp}</td>
+                    <td style="padding:8px; text-align:center; color:#e74c3c;">${st.min_vp === 999 ? 0 : st.min_vp}</td>
+                    <td style="padding:8px; text-align:center;">${avgRounds}</td>
+                    <td style="padding:8px; text-align:center;">${(st.w_tokens / st.games).toFixed(1)}</td>
+                    <td style="padding:8px; text-align:center;">${(st.vp_loop / st.games / 5).toFixed(1)}</td>
+                </tr>`;
+            });
+            tableHtml += `</table>`;
+
+            // Card Usage Statistics PER STRATEGY
+            // Structure: r.cardUsageStats = { 'Builder': { id: {name, build, move} }, ... }
+            const cardUsageByStrat = { 'Builder': {}, 'Looper': {}, 'Balanced': {} };
+
+            results.forEach(r => {
+                if (r.cardUsageStats) {
+                    for (let strat in r.cardUsageStats) {
+                        if (!cardUsageByStrat[strat]) continue; 
+                        const sStats = r.cardUsageStats[strat];
+                        for (let id in sStats) {
+                             if (!cardUsageByStrat[strat][id]) {
+                                 cardUsageByStrat[strat][id] = { name: sStats[id].name, build: 0, move: 0 };
+                             }
+                             cardUsageByStrat[strat][id].build += sStats[id].build || 0;
+                             cardUsageByStrat[strat][id].move += sStats[id].move || 0;
+                        }
+                    }
+                }
+            });
+
+            // Flex Container for Side-by-Side Tables
+            let cardHtml = `<h4>カード使用統計（性格別：使用回数 Top 10）</h4>
+            <div style="display:flex; flex-wrap:wrap; gap:20px; justify-content: flex-start;">`;
+
+            ['Builder', 'Looper'].forEach(s => {
+                const usage = cardUsageByStrat[s];
+                if (!usage) return;
+                
+                // Sort by TOTAL usage
+                const list = Object.entries(usage)
+                    .map(([id, stats]) => ({
+                        id, name: stats.name, build: stats.build, move: stats.move, total: stats.build + stats.move
+                    }))
+                    .filter(c => c.total > 0)
+                    .sort((a, b) => b.total - a.total)
+                    .slice(0, 10); 
+
+                cardHtml += `<div style="flex:1; min-width:300px; max-width:400px; border:1px solid #ddd; background:#fff;">
+                <h5 style="margin:0; background:#333; color:#fff; padding:8px; text-align:center;">${s} Top Cards</h5>
+                <table style="width:100%; border-collapse:collapse; font-size:11px;">
+                    <tr style="background:#f0f0f0; border-bottom:1px solid #ccc;">
+                        <th style="padding:4px; text-align:left;">Card</th>
+                        <th style="padding:4px; text-align:right;">Bld</th>
+                        <th style="padding:4px; text-align:right;">Mov</th>
+                        <th style="padding:4px; text-align:right;">Tot</th>
+                    </tr>
+                    ${list.map((c, i) => `
+                    <tr style="border-bottom:1px solid #eee; background:${i%2===0 ? '#fff' : '#f9f9f9'};">
+                        <td style="padding:4px;">${c.name}</td>
+                        <td style="padding:4px; text-align:right; color:#27ae60; font-weight:${c.build > c.move ? 'bold' : 'normal'};">${c.build}</td>
+                        <td style="padding:4px; text-align:right; color:#2980b9; font-weight:${c.move > c.build ? 'bold' : 'normal'};">${c.move}</td>
+                        <td style="padding:4px; text-align:right; font-weight:bold;">${c.total}</td>
+                    </tr>`).join('')}
+                </table></div>`;
+            });
+            cardHtml += `</div>`;
+            
+            // Overall Stats (Top 15)
+            const overallUsage = {};
+            for (let s in cardUsageByStrat) {
+                for (let id in cardUsageByStrat[s]) {
+                    if (!overallUsage[id]) overallUsage[id] = { name: cardUsageByStrat[s][id].name, build: 0, move: 0 };
+                    overallUsage[id].build += cardUsageByStrat[s][id].build;
+                    overallUsage[id].move += cardUsageByStrat[s][id].move;
+                }
+            }
+            const overallList = Object.entries(overallUsage)
+                .map(([id, stats]) => ({
+                    id, name: stats.name, build: stats.build, move: stats.move, total: stats.build + stats.move
+                }))
+                .filter(c => c.total > 0)
+                .sort((a, b) => b.total - a.total)
+                .slice(0, 15);
+
+             cardHtml += `<h5 style="margin-top:20px; border-bottom:2px solid #ccc; padding-bottom:5px;">全体 Top 15 Cards</h5>
+            <table style="width:100%; max-width:800px; border-collapse:collapse; background:white; font-size:12px; margin-bottom:30px;">
+                <tr style="background:#f5f5f5;">
+                    <th style="padding:6px; text-align:left;">Rank</th>
+                    <th style="padding:6px; text-align:left;">Name</th>
+                    <th style="padding:6px; text-align:right;">Build</th>
+                    <th style="padding:6px; text-align:right;">Move</th>
+                    <th style="padding:6px; text-align:right;">Total</th>
+                    <th style="padding:6px; text-align:right;">Ratio (B:M)</th>
+                </tr>
+                ${overallList.map((c, i) => `
+                <tr style="border-bottom:1px solid #eee;">
+                    <td style="padding:6px;">${i+1}</td>
+                    <td style="padding:6px; font-weight:bold;">${c.name}</td>
+                    <td style="padding:6px; text-align:right; background:#e8f5e9;">${c.build}</td>
+                    <td style="padding:6px; text-align:right; background:#e3f2fd;">${c.move}</td>
+                    <td style="padding:6px; text-align:right; font-weight:bold;">${c.total}</td>
+                    <td style="padding:6px; text-align:right; color:#7f8c8d;">
+                        ${(c.build/(c.total||1)*100).toFixed(0)}:${(c.move/(c.total||1)*100).toFixed(0)}
+                    </td>
+                </tr>`).join('')}
+            </table>`;
+
+            const resDiv = document.getElementById('resultsText');
+            resDiv.innerHTML = summaryHTML + tableHtml + cardHtml;
+            resDiv.style.display = 'block';
+            resDiv.style.display = 'block';
+
+            if (typeof Chart === 'undefined') {
+                console.error("Chart.js not loaded");
+                alert("Chart.js logic failed.");
+                return;
+            }
+            try {
+               // Chart 1: Win Count
+               const ctxWin = document.getElementById('chartStrategyWin').getContext('2d');
+               if (charts['win']) charts['win'].destroy();
+               charts['win'] = new Chart(ctxWin, {
+                    type: 'doughnut',
+                    data: {
+                        labels: strategies,
+                        datasets: [{
+                            data: [wins['Builder'], wins['Looper'], wins['Balanced']],
+                            backgroundColor: ['#e74c3c', '#3498db', '#f1c40f']
+                        }]
+                    },
+                    options: { plugins: { title: { display: true, text: 'Win Count by Strategy' } } }
+               });
+               
+               // Chart 2: VP Breakdown
+                const ctxVP = document.getElementById('chartStrategyVP').getContext('2d');
+                if (charts['vp']) charts['vp'].destroy();
+                charts['vp'] = new Chart(ctxVP, {
+                    type: 'bar',
+                    data: {
+                        labels: strategies,
+                        datasets: [
+                            {
+                                label: 'Card VP',
+                                data: strategies.map(s => stratStats[s].games ? (stratStats[s].vp_card / stratStats[s].games).toFixed(1) : 0),
+                                backgroundColor: '#3498db'
+                            },
+                            {
+                                label: 'Loop (W) VP',
+                                data: strategies.map(s => stratStats[s].games ? (stratStats[s].vp_loop / stratStats[s].games).toFixed(1) : 0),
+                                backgroundColor: '#e67e22'
+                            }
+                        ]
+                    },
+                    options: { scales: { y: { stacked: true, title: {display:true, text:'Avg VP Breakdwon'} }, x: { stacked: true } } }
+                });
+
+                // Chart 3: Seat
+                const ctxSeat = document.getElementById('chartSeatWin').getContext('2d');
+                if (charts['seat']) charts['seat'].destroy();
+                charts['seat'] = new Chart(ctxSeat, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Seat 1', 'Seat 2', 'Seat 3', 'Seat 4'],
+                        datasets: [{ label: 'Win Count (approx)', data: seatWins, backgroundColor: '#9b59b6' }]
+                    }
+                });
+
+                // Chart 4: Aux Stats + Avg Rounds
+                const ctxAux = document.getElementById('chartStrategyAux').getContext('2d');
+                if (charts['aux']) charts['aux'].destroy();
+                charts['aux'] = new Chart(ctxAux, {
+                    type: 'bar',
+                    data: {
+                        labels: strategies,
+                        datasets: [
+                            { label: 'Avg W Tokens', data: strategies.map(s => stratStats[s].games?(stratStats[s].w_tokens/stratStats[s].games).toFixed(2):0), backgroundColor: '#e67e22' },
+                            { label: 'Avg Built Cards', data: strategies.map(s => stratStats[s].games?(stratStats[s].built_cards/stratStats[s].games).toFixed(2):0), backgroundColor: '#2ecc71' },
+                            { label: 'Avg Rounds (Game)', data: strategies.map(s => stratStats[s].games?(stratStats[s].rounds/stratStats[s].games).toFixed(2):0), backgroundColor: '#95a5a6' }
+                        ]
+                    },
+                    options: {
+                        plugins: { title: { display: true, text: 'Average Secondary Stats by Strategy' } }
+                    }
+                });
+
+                // Chart 5: Map Heatmap
+                const nodeIds = Object.keys(nodeVisits).sort((a,b)=>parseInt(a)-parseInt(b));
+                 const nodeNames = { 
+                    1: "Makati", 2: "Kuwake", 3: "Kukeke", 4: "Ikkyau", 5: "Taupo",
+                    6: "Shep", 7: "Pasir", 8: "Kutiya", 9: "Nanala", 10: "Inushi",
+                    11: "Spuk", 12: "Atalam", 13: "Aikit", 14: "Pede" 
+                };
+                const ctxMap = document.getElementById('chartMapHeatmap').getContext('2d');
+                if (charts['map']) charts['map'].destroy();
+                charts['map'] = new Chart(ctxMap, {
+                    type: 'bar',
+                    data: {
+                        labels: nodeIds.map(id => `${id}:${nodeNames[id]||''}`),
+                        datasets: [{
+                            label: 'Avg Visits (per Game)',
+                            data: nodeIds.map(id => (nodeVisits[id] / results.length / 4).toFixed(1)), 
+                            backgroundColor: nodeIds.map(id => {
+                                const val = nodeVisits[id] / results.length / 4;
+                                return val > 10 ? '#c0392b' : (val > 5 ? '#e67e22' : '#2ecc71');
+                            })
+                        }]
+                    },
+                    options: {
+                        plugins: { title: { display: true, text: 'Average Node Visits per Player per Game' } },
+                        scales: {
+                            y: { beginAtZero: true, title: { display: true, text: 'Avg Visits' } }
+                        }
+                    }
+                });
+                
+                // Chart 6: Resource Volume Range (Min/Max/Avg)
+                // New logic: Aggregate Min/Max Total Resources held at each turn
+                const resTurnStats = []; // Index = Turn, Value = { min: 999, max: -1, sum: 0, count: 0 }
+                
+                results.forEach(g => {
+                    if (g.error || !g.resourceHistory) return;
+                    g.resourceHistory.forEach((snapshot, turnIdx) => {
+                         if (!resTurnStats[turnIdx]) resTurnStats[turnIdx] = { min: 9999, max: -1, sum: 0, count: 0 };
+                         
+                         // Snapshot is Sum of all players for that turn (from original logic) or per player?
+                         // check batch_simulation.html logic for snapshot.
+                         // It seems to be Total Resources held by ALL players.
+                         // The prompt asks for "1ターンの資源". 
+                         // Assuming we want to see the fluctuation of total economy size.
+                         
+                         const totalRes = (snapshot.F||0) + (snapshot.M||0) + (snapshot.K||0) + (snapshot.W||0);
+                         
+                         if (totalRes < resTurnStats[turnIdx].min) resTurnStats[turnIdx].min = totalRes;
+                         if (totalRes > resTurnStats[turnIdx].max) resTurnStats[turnIdx].max = totalRes;
+                         resTurnStats[turnIdx].sum += totalRes;
+                         resTurnStats[turnIdx].count++;
+                    });
+                });
+                
+                const labelsTurn = resTurnStats.map((_, i) => `T${i+1}`);
+                const dataAvg = resTurnStats.map(s => (s.sum / s.count).toFixed(1));
+                const dataMin = resTurnStats.map(s => s.min);
+                const dataMax = resTurnStats.map(s => s.max);
+                
+                const ctxRes = document.getElementById('chartResourceVolume').getContext('2d');
+                if (charts['resVol']) charts['resVol'].destroy();
+                charts['resVol'] = new Chart(ctxRes, {
+                    type: 'line',
+                    data: {
+                        labels: labelsTurn,
+                        datasets: [
+                            { 
+                                label: 'Max', 
+                                data: dataMax, 
+                                borderColor: 'rgba(231, 76, 60, 0.5)', 
+                                backgroundColor: 'transparent', 
+                                fill: false, 
+                                borderDash: [5, 5], 
+                                tension: 0.1 
+                            },
+                            { 
+                                label: 'Avg', 
+                                data: dataAvg, 
+                                borderColor: '#2ecc71', 
+                                backgroundColor: 'rgba(46, 204, 113, 0.2)', 
+                                fill: false, 
+                                tension: 0.1 
+                            },
+                            { 
+                                label: 'Min', 
+                                data: dataMin, 
+                                borderColor: 'rgba(52, 152, 219, 0.5)', 
+                                backgroundColor: 'transparent', 
+                                fill: false, 
+                                borderDash: [5, 5], 
+                                tension: 0.1 
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: { title: { display: true, text: 'Total Resource Volume Range (Min/Max/Avg) per Turn' } },
+                        scales: { y: { beginAtZero: true, title: {display:true, text:'Total Volume'} }, x: { title: {display:true, text:'Turn'} } }
+                    }
+                });
+                
+                // Chart 7: Game Duration Distribution
+                const durationLabels = Object.keys(roundCounts).map(Number).sort((a,b)=>a-b);
+                const durationData = durationLabels.map(r => roundCounts[r]);
+                
+                // We need a specific canvas for this if we want it separate, or replace an existing one.
+                // Assuming we can add a canvas dynamically formatted or reuse an ID if we had one.
+                // But simplified: I should have added a canvas to the HTML structure first?
+                // The current HTML has: chartStrategyWin, chartStrategyVP, chartSeatWin, chartStrategyAux, chartMapHeatmap, chartResourceVolume.
+                // I will repurpose 'chartResourceVolume' area or Append a new one?
+                // Append logic:
+                let ctxDuration = document.getElementById('chartDurationHisto');
+                if (!ctxDuration) {
+                     // Create container if not exists (Hack for now)
+                     const container = document.createElement('div');
+                     container.className = 'chart-container';
+                     container.innerHTML = '<canvas id="chartDurationHisto"></canvas>';
+                     document.getElementById('dashboard').appendChild(container);
+                     ctxDuration = document.getElementById('chartDurationHisto');
+                }
+                
+                if (charts['duration']) charts['duration'].destroy();
+                charts['duration'] = new Chart(ctxDuration.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: durationLabels,
+                        datasets: [{
+                            label: 'Game Count',
+                            data: durationData,
+                            backgroundColor: '#34495e'
+                        }]
+                    },
+                    options: {
+                        plugins: { title: { display: true, text: 'Game Duration Distribution (Rounds)' } },
+                        scales: { x: { title: {display:true, text: 'Rounds'} }, y: { title: {display:true, text: 'Frequency'} } }
+                    }
+                });
+                
+                // Chart 8: Max Resource Breakdown per Turn
+                // Calculate max per type per turn
+                const resMaxTurn = [];
+                results.forEach(g => {
+                    if (g.error || !g.resourceHistory) return;
+                    g.resourceHistory.forEach((snapshot, turnIdx) => {
+                         if (!resMaxTurn[turnIdx]) resMaxTurn[turnIdx] = { F: 0, M: 0, K: 0, W: 0 };
+                         if (snapshot.F > resMaxTurn[turnIdx].F) resMaxTurn[turnIdx].F = snapshot.F;
+                         if (snapshot.M > resMaxTurn[turnIdx].M) resMaxTurn[turnIdx].M = snapshot.M;
+                         if (snapshot.K > resMaxTurn[turnIdx].K) resMaxTurn[turnIdx].K = snapshot.K;
+                         if (snapshot.W > resMaxTurn[turnIdx].W) resMaxTurn[turnIdx].W = snapshot.W;
+                    });
+                });
+                
+                const labelsTurnRes = resMaxTurn.map((_, i) => `T${i+1}`);
+                
+                let ctxBreakdown = document.getElementById('chartResBreakdown');
+                if (!ctxBreakdown) {
+                     const container = document.createElement('div');
+                     container.className = 'chart-container';
+                     container.innerHTML = '<canvas id="chartResBreakdown"></canvas>';
+                     document.getElementById('dashboard').appendChild(container);
+                     ctxBreakdown = document.getElementById('chartResBreakdown');
+                }
+                
+                if (charts['resBreakdown']) charts['resBreakdown'].destroy();
+                charts['resBreakdown'] = new Chart(ctxBreakdown.getContext('2d'), {
+                    type: 'line',
+                    data: {
+                        labels: labelsTurnRes,
+                        datasets: [
+                            { label: 'Max Food', data: resMaxTurn.map(t=>t.F), borderColor: '#f1c40f', backgroundColor: 'transparent', tension: 0.1 },
+                            { label: 'Max Material', data: resMaxTurn.map(t=>t.M), borderColor: '#e74c3c', backgroundColor: 'transparent', tension: 0.1 },
+                            { label: 'Max Knowledge', data: resMaxTurn.map(t=>t.K), borderColor: '#3498db', backgroundColor: 'transparent', tension: 0.1 },
+                            { label: 'Max Money', data: resMaxTurn.map(t=>t.W), borderColor: '#2ecc71', backgroundColor: 'transparent', tension: 0.1 }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: { title: { display: true, text: 'Max Required Tokens per Turn (by Type)' } },
+                        scales: { y: { beginAtZero: true, title: {display:true, text:'Max Tokens Needed'} }, x: { title: {display:true, text:'Turn'} } }
+                    }
+                });
+
+                document.getElementById('dashboard').style.display = 'grid';
+
+            } catch (e) {
+                console.error("RenderCharts Error:", e);
+                alert("グラフ描画エラー: " + e.message);
+            }
+        }
+
+
+        function downloadResults() {
+            const btn = event.target;
+            const originalText = btn.innerText;
+            btn.innerText = "Processing...";
+            btn.disabled = true;
+
+            setTimeout(() => {
+                const data = {
+                    timestamp: new Date().toISOString(),
+                    simulationCount: allResults.length,
+                    playerCount: parseInt(document.getElementById('playerCount').value),
+                    games: allResults
+                };
+                
+                const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `ail_lime_sim_${allResults.length}g_${Date.now()}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }, 100);
+        }
+
+        function clearResults() {
+            if (confirm("結果をクリアしますか？")) {
+                allResults = [];
+                document.getElementById('resultsText').textContent = "";
+                document.getElementById('summary').style.display = 'none';
+                document.getElementById('progress').textContent = "Ready.";
+                document.getElementById('downloadBtn').disabled = true;
+            }
         }
     </script>
 </body>

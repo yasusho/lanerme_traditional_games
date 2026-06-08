@@ -34,7 +34,15 @@ class NetworkManager {
      */
     initAsHost() {
         return new Promise((resolve, reject) => {
-            const roomId = this.generateRoomId();
+            // ホストIDの永続化（タブ/リロード対策）
+            // sessionStorageを使用してブラウザ閉じたらリセット
+            let roomId = sessionStorage.getItem('ail_lime_host_id');
+            if (!roomId) {
+                roomId = this.generateRoomId();
+                sessionStorage.setItem('ail_lime_host_id', roomId);
+            }
+
+            console.log('[Network] Initializing as host with ID:', roomId);
 
             this.peer = new Peer(roomId, {
                 debug: 2
@@ -45,6 +53,13 @@ class NetworkManager {
                 this.isHost = true;
                 this.hostId = id;
                 this.localPlayerId = 0; // ホストはプレイヤー0
+
+                // IDが異なる場合（重複などで割り当てられた場合）は保存更新
+                if (id !== roomId) {
+                    console.warn('[Network] ID mismatch, updating saved ID:', id);
+                    sessionStorage.setItem('ail_lime_host_id', id);
+                }
+
                 resolve(id);
             });
 
@@ -71,41 +86,68 @@ class NetworkManager {
      */
     initAsGuest(hostId) {
         return new Promise((resolve, reject) => {
-            // ゲストには独自のIDを生成
-            const guestId = 'GUEST-' + Math.random().toString(36).substr(2, 8);
+            // ゲストIDの永続化
+            let guestId = localStorage.getItem('ail_lime_guest_id');
+            if (!guestId) {
+                guestId = 'GUEST-' + Math.random().toString(36).substr(2, 8);
+                localStorage.setItem('ail_lime_guest_id', guestId);
+            }
 
-            this.peer = new Peer(guestId, {
-                debug: 2
-            });
+            console.log('[Network] Initializing as guest with ID:', guestId);
 
-            this.peer.on('open', (id) => {
-                console.log('[Network] Guest initialized with ID:', id);
-                this.isHost = false;
-                this.hostId = hostId;
-
-                // ホストに接続
-                const conn = this.peer.connect(hostId, {
-                    reliable: true
+            const tryConnect = (retryCount = 0) => {
+                const peer = new Peer(guestId, {
+                    debug: 2
                 });
 
-                conn.on('open', () => {
-                    console.log('[Network] Connected to host:', hostId);
-                    this.connections.set(hostId, conn);
-                    this.setupConnectionHandlers(conn);
-                    resolve();
+                peer.on('open', (id) => {
+                    console.log('[Network] Guest initialized with ID:', id);
+                    this.isHost = false;
+                    this.hostId = hostId;
+                    this.peer = peer;
+
+                    // ホストに接続
+                    const conn = peer.connect(hostId, {
+                        reliable: true
+                    });
+
+                    conn.on('open', () => {
+                        console.log('[Network] Connected to host:', hostId);
+                        this.connections.set(hostId, conn);
+                        this.setupConnectionHandlers(conn);
+                        resolve();
+                    });
+
+                    conn.on('error', (err) => {
+                        console.error('[Network] Connection to host failed:', err);
+                        reject(err);
+                    });
                 });
 
-                conn.on('error', (err) => {
-                    console.error('[Network] Connection error:', err);
-                    reject(err);
-                });
-            });
+                peer.on('error', (err) => {
+                    console.error('[Network] Peer error:', err);
+                    if (err.type === 'unavailable-id') {
+                        if (retryCount < 5) {
+                            console.warn(`[Network] ID unavailable, retrying (${retryCount + 1}/5)...`);
+                            peer.destroy();
+                            setTimeout(() => {
+                                tryConnect(retryCount + 1);
+                            }, 1000 + (retryCount * 500));
+                            return;
+                        }
 
-            this.peer.on('error', (err) => {
-                console.error('[Network] Guest error:', err);
-                if (this.onErrorCallback) this.onErrorCallback(err);
-                reject(err);
-            });
+                        console.warn('[Network] ID permanently unavailable, generating new one...');
+                        localStorage.removeItem('ail_lime_guest_id');
+                        guestId = 'GUEST-' + Math.random().toString(36).substr(2, 8);
+                        localStorage.setItem('ail_lime_guest_id', guestId);
+                        tryConnect(0);
+                    } else {
+                        reject(err);
+                    }
+                });
+            };
+
+            tryConnect();
         });
     }
 

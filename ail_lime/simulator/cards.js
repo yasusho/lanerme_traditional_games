@@ -1,4 +1,6 @@
+// カードデータ - rule_v2.md (Ver 2.3+) に準拠
 const cardsData = [
+    // === 文化カード (緑) - 知識(K) ===
     {
         id: 1,
         name_jp: "燐字の光",
@@ -12,8 +14,7 @@ const cardsData = [
         production_condition: 'K',
         production: { K: 1 },
         vp_logic: "static",
-        vp: 1,
-        chain_build: 1,
+        vp: 0,
         image_src: "../cards_new/cards_1 ページ.png"
     },
     {
@@ -58,16 +59,18 @@ const cardsData = [
         count: 2,
         move: 1,
         move_resource: ["K"],
-        cost: { K: 2, F: 2, W: 1 },
+        cost: { K: 2, F: 2 },
         production_condition: 'K',
-        production: { M: "variable" }, // Dynamic production
+        production: { M: "variable" },
         vp_logic: "static",
-        vp: 2,
+        vp: 3,
         production_logic: "variable",
         production_formula: "count(culture_cards)",
         production_resource: "M",
         image_src: "../cards_new/cards_4 ページ.png"
     },
+
+    // === 産業カード (紫) - 資材(M) ===
     {
         id: 5,
         name_jp: "資源の採掘",
@@ -81,7 +84,7 @@ const cardsData = [
         production_condition: 'M',
         production: { M: 1 },
         vp_logic: "static",
-        vp: 1,
+        vp: 0,
         chain_build: 1,
         image_src: "../cards_new/cards_5 ページ.png"
     },
@@ -97,10 +100,9 @@ const cardsData = [
         cost: { M: 1, K: 2 },
         production_condition: 'M',
         production: { K: 1 },
-        vp_logic: "none",
-        vp: 0,
-        effect: "convert_same3_to_W",
-        chain_build: 2,
+        vp_logic: "static",
+        vp: 1,
+        chain_build: 1,
         image_src: "../cards_new/cards_6 ページ.png"
     },
     {
@@ -128,16 +130,18 @@ const cardsData = [
         count: 2,
         move: 3,
         move_resource: ["M"],
-        cost: { M: 2, K: 2, W: 1 },
+        cost: { M: 2, K: 2 },
         production_condition: 'M',
-        production: { F: "variable" }, // Dynamic production
+        production: { F: "variable" },
         vp_logic: "static",
-        vp: 1,
+        vp: 3,
         production_logic: "variable",
         production_formula: "count(industry_cards)",
         production_resource: "F",
         image_src: "../cards_new/cards_8 ページ.png"
     },
+
+    // === 政治カード (橙) - 食糧(F) ===
     {
         id: 9,
         name_jp: "法改正",
@@ -151,8 +155,7 @@ const cardsData = [
         production_condition: 'F',
         production: { F: 1 },
         vp_logic: "static",
-        vp: 1,
-        draw_extra: 1,
+        vp: 0,
         image_src: "../cards_new/cards_9 ページ.png"
     },
     {
@@ -169,12 +172,11 @@ const cardsData = [
         production: { M: 1 },
         vp_logic: "none",
         vp: 0,
-        draw_extra: 2,
+        draw_extra: 1,
         image_src: "../cards_new/cards_10 ページ.png"
     },
     {
         id: 11,
-
         name_jp: "アイル国民の力",
         name_original: "ail lata leti anpe",
         type: "politics",
@@ -187,6 +189,7 @@ const cardsData = [
         production: { F: 2 },
         vp_logic: "static",
         vp: 2,
+        draw_extra: 1,
         image_src: "../cards_new/cards_11 ページ.png"
     },
     {
@@ -198,66 +201,54 @@ const cardsData = [
         count: 2,
         move: 2,
         move_resource: ["F"],
-        cost: { F: 2, M: 2, W: 1 },
+        cost: { F: 2, M: 2 },
         production_condition: "F",
         production: { K: "variable" },
         vp_logic: "static",
-        vp: 1,
+        vp: 3,
         production_logic: "variable",
         production_formula: "count(politics_cards)",
         production_resource: "K",
         image_src: "../cards_new/cards_12 ページ.png"
     },
-    {
-        id: 13,
 
-        name_jp: "投資",
-        name_original: "amolit cu",
-        type: "colorless",
-        level: null,
-        count: 4,
-        move: 0,
-        cost: { multi: "same3" }, // "同種3" (3 of same kind)
-        effect: "convert_W2_to_W3", // W2 -> W3
-        vp: 1,
-        chain_build: 1,
-        image_src: "../cards_new/cards_13 ページ.png"
-    },
+    // === 無色・特殊カード (白) ===
+    // ID 13 (投資) は rule_v2.md から削除されたため除外
+
     {
         id: 14,
-
         name_jp: "旅",
         name_original: "xuwelic",
         type: "colorless",
         level: null,
         count: 4,
         move: 2,
-        move_resource: ["W"],
-        cost: { multi: "same3" },
-        effect: "convert_K2_to_W",
-        vp: 1,
+        move_resource: ["K", "M", "F"],
+        cost: { multi: "same4" },
+        effect: "convert_same3_to_W",
+        vp: 0,
         chain_build: 1,
         image_src: "../cards_new/cards_14 ページ.png"
     },
+
+    // === 変動VPカード (得点源) ===
     {
         id: 15,
-
         name_jp: "良き文化",
         name_original: "pankaleti mo",
         type: "colorless",
         level: null,
         count: 2,
         move: 3,
-        move_resource: ["K", "M", "F"], // "K/M/F"
+        move_resource: ["K", "M", "F"],
         cost: { K: 3, F: 3 },
         vp_logic: "variable",
-        vp_text: "1 x 文化",
-        vp_formula: "1 * count(culture_cards)",
+        vp_text: "2 x 文化",
+        vp_formula: "2 * count(culture_cards)",
         image_src: "../cards_new/cards_15 ページ.png"
     },
     {
         id: 16,
-
         name_jp: "古きを思い新しきに行く",
         name_original: "ticotit penulleti pi tude jo dutucunleti",
         type: "colorless",
@@ -265,10 +256,10 @@ const cardsData = [
         count: 2,
         move: 3,
         move_resource: ["K", "M", "F"],
-        cost: { M: 3, K: 2 },
+        cost: { M: 3, K: 3 },
         vp_logic: "variable",
-        vp_text: "1 x 産業",
-        vp_formula: "1 * count(industry_cards)",
+        vp_text: "2 x 産業",
+        vp_formula: "2 * count(industry_cards)",
         image_src: "../cards_new/cards_16 ページ.png"
     },
     {
@@ -282,42 +273,42 @@ const cardsData = [
         move_resource: ["K", "M", "F"],
         cost: { F: 3, M: 3 },
         vp_logic: "variable",
-        vp_text: "1 x 政治",
-        vp_formula: "1 * count(politics_cards)",
+        vp_text: "2 x 政治",
+        vp_formula: "2 * count(politics_cards)",
         image_src: "../cards_new/cards_17 ページ.png"
     },
     {
         id: 18,
-
         name_jp: "アイルの道",
         name_original: "ail lime",
         type: "colorless",
         level: null,
         count: 1,
         move: 3,
-        move_resource: ["W"],
+        move_resource: ["K", "M", "F"],
         cost: { F: 2, K: 2, M: 2 },
         vp_logic: "variable",
         vp_formula: "2 * count(round_tokens)",
-        vp_text: "周回トークン x2",
+        vp_text: "Wトークン x2",
         image_src: "../cards_new/cards_18 ページ.png"
     },
     {
         id: 19,
-
         name_jp: "アイル共和国憲法",
         name_original: "ail xep cepkulante",
         type: "colorless",
         level: null,
         count: 1,
         move: 3,
-        move_resource: ["W"],
+        move_resource: ["K", "M", "F"],
         cost: { F: 2, K: 2, M: 2 },
         vp_logic: "variable",
-        vp_formula: "2 * min(culture, industry, politics)",
-        vp_text: "文化産業政治セット x2",
+        vp_formula: "3 * min(culture, industry, politics)",
+        vp_text: "文化産業政治セット x3",
         image_src: "../cards_new/cards_19 ページ.png"
     }
 ];
 
 const cardBackImage = "../cards_new/cards_20 ページ.png";
+
+if (typeof module !== 'undefined') module.exports = cardsData;

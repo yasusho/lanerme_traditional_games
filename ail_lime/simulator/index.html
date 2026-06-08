@@ -103,8 +103,8 @@
             <h1>AIL LIME</h1>
             <div id="game-info">
                 <span>Round: <span id="current-round">1</span></span>
-                <span style="margin-left: 20px;">Remaining RT: <span id="remaining-rt">0</span></span>
                 <span style="margin-left: 20px;">Phase: <span id="current-phase">Setup</span></span>
+                <span style="margin-left: 20px; color: var(--color-w); font-weight: bold;">W Supply: <span id="w-supply">0</span></span>
             </div>
         </div>
 
@@ -136,9 +136,11 @@
         </div>
         
         <!-- Action Buttons Overlay or Footer -->
-        <div id="action-panel" style="position: fixed; bottom: 20px; right: 20px; z-index: 100;">
-            <button id="btn-next-phase" disabled>Next Phase</button>
-            <div id="dynamic-actions"></div>
+        <div id="action-panel" style="position: fixed; bottom: 20px; right: 20px; z-index: 100; display: flex; flex-direction: column; align-items: flex-end; gap: 10px;">
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <div id="dynamic-actions" style="display: flex; gap: 10px;"></div>
+            </div>
+            <button id="btn-next-phase" disabled style="padding: 8px 16px;">Next Phase</button>
         </div>
 
         <!-- Payment Modal -->
@@ -168,7 +170,9 @@
     <!-- Scripts -->
     <script src="map_data.js"></script>
     <script src="cards.js"></script>
+    <script src="game_core.js"></script>
+    <script src="vp_formulas.js"></script>
     <script src="network.js"></script>
-    <script src="game.js?v=20260107b"></script>
+    <script src="game.js?v=20260116j"></script>
 </body>
 </html>
